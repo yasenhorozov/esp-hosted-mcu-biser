@@ -118,7 +118,7 @@ void * hosted_uart_init(void)
 	uart_parity_t parity;
 	uart_stop_bits_t stop_bits;
 
-	ctx = calloc(1, sizeof(uart_ctx_t));
+	ctx = (uart_ctx_t*)g_h.funcs->_h_malloc(sizeof(uart_ctx_t));
 	assert(ctx);
 
 	switch (H_UART_NUM_DATA_BITS) {
@@ -212,6 +212,8 @@ esp_err_t hosted_uart_deinit(void *ctx)
 	if (ret != ESP_OK)
 		ESP_LOGE(TAG, "%s: Failed to flush uart Tx", __func__);
 	uart_driver_delete(H_UART_PORT);
+
+	HOSTED_FREE(ctx);
 
 	return ESP_OK;
 }

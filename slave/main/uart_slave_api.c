@@ -44,6 +44,12 @@
 #define BUFFER_SIZE                MAX_TRANSPORT_BUF_SIZE
 #define EVENT_QUEUE_SIZE           100
 
+/* scratch buffer may need to hold the current packet
+   plus the start of the next packet as the incoming UART Rx
+   stream may hold both in one read
+*/
+#define UART_SCRATCH_BUF_SIZE (BUFFER_SIZE * 2)
+
 #define UART_PROCESS_RX_DATA_ERROR (-1)
 #define UART_PROCESS_WAITING_MORE_RX_DATA (0)
 #define UART_PROCESS_RX_DATA_DONE (1)
@@ -116,14 +122,6 @@ static inline void h_uart_mempool_create()
 	assert(buf_mp_tx_g);
 	assert(buf_mp_rx_g);
 #endif
-}
-
-static unsigned int h_uart_for_loop_delay(unsigned int number)
-{
-	volatile int idx = 0;
-	for (idx=0; idx<100*number; idx++) {
-	}
-	return 0;
 }
 
 static inline void h_uart_mempool_destroy()
@@ -245,7 +243,7 @@ static int process_uart_rx_data(size_t size)
 	int remaining_len;
 
 	if (!uart_scratch_buf) {
-		uart_scratch_buf = malloc(BUFFER_SIZE);
+		uart_scratch_buf = malloc(UART_SCRATCH_BUF_SIZE);
 		assert(uart_scratch_buf);
 	}
 
@@ -476,8 +474,6 @@ static int32_t h_uart_write(interface_handle_t *handle, interface_buffer_handle_
 
 	// wait until all data is transmitted
 	uart_wait_tx_done(HOSTED_UART, portMAX_DELAY);
-
-	h_uart_for_loop_delay(250);
 
 	if ((tx_len < 0) || (tx_len != total_len)) {
 		ESP_LOGE(TAG , "uart transmit error");

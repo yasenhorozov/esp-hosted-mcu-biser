@@ -30,9 +30,20 @@ static const char TAG[] = "H_UART_DRV";
 #define UART_PROCESS_WAITING_MORE_RX_DATA (0)
 #define UART_PROCESS_RX_DATA_DONE (1)
 
+/* scratch buffer may need to hold the current packet
+   plus the start of the next packet as the incoming UART Rx
+   stream may hold both in one read
+*/
+#define UART_SCRATCH_BUF_SIZE (MAX_UART_BUFFER_SIZE * 2)
+
+// UART is low throughput, so throttling should not be needed
+#define USE_DATA_THROTTLING (0)
+
 static void h_uart_write_task(void const* pvParameters);
 static void h_uart_read_task(void const* pvParameters);
+#if USE_DATA_THROTTLING
 static int update_flow_ctrl(uint8_t *rxbuff);
+#endif
 
 /* TODO to move this in transport drv */
 extern transport_channel_t *chan_arr[ESP_MAX_IF];
@@ -174,6 +185,7 @@ done:
 	}
 }
 
+#if USE_DATA_THROTTLING
 static int update_flow_ctrl(uint8_t *rxbuff)
 {
 	struct esp_payload_header * h = (struct esp_payload_header *)rxbuff;
@@ -189,6 +201,7 @@ static int update_flow_ctrl(uint8_t *rxbuff)
 		return 0;
 	}
 }
+#endif
 
 static void h_uart_process_rx_task(void const* pvParameters)
 {
@@ -367,12 +380,14 @@ static esp_err_t h_uart_push_data_to_queue(uint8_t * buf, uint32_t buf_len)
 	uint16_t len = 0;
 	uint16_t offset = 0;
 
+#if USE_DATA_THROTTLING
 	if (update_flow_ctrl(buf)) {
 		// detected and updated flow control
 		// no need to further process the packet
 		h_uart_buffer_free(buf);
 		return ESP_OK;
 	}
+#endif
 
 	/* Drop packet if no processing needed */
 	if (!is_valid_uart_rx_packet(buf, &len, &offset)) {
@@ -408,7 +423,7 @@ static int process_uart_rx_data(size_t size)
 	int remaining_len;
 
 	if (!uart_scratch_buf) {
-		uart_scratch_buf = malloc(MAX_UART_BUFFER_SIZE);
+		uart_scratch_buf = malloc(UART_SCRATCH_BUF_SIZE);
 		assert(uart_scratch_buf);
 	}
 
