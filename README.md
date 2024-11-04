@@ -1,5 +1,7 @@
 # ESP-Hosted-MCU: Espressif SoCs as Communication Co-Processors
 
+[![Component Registry](https://components.espressif.com/components/espressif/esp_hosted/badge.svg)](https://components.espressif.com/components/espressif/esp_hosted)
+
 ## 1 Introduction
 
 ESP-Hosted-MCU is an open-source solution that allows you to use Espressif Chipsets and modules as a communication co-processor. This solution provides wireless connectivity (Wi-Fi and Bluetooth) to the host microprocessor or microcontroller, enabling it to communicate with other devices. Additionally, the user has complete control over the co-processor's resources.
