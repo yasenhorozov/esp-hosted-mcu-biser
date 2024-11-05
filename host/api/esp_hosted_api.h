@@ -1,17 +1,8 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright 2015-2021 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+* SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+*
+* SPDX-License-Identifier: Apache-2.0
+*/
 
 /** prevent recursive inclusion **/
 #ifndef __ESP_HOSTED_API_H__
@@ -26,6 +17,7 @@ extern "C" {
 #include "esp_wifi.h"
 #include "transport_drv.h"
 #include "esp_wifi_remote.h"
+#include "esp_hosted_config.h"
 #include "esp_hosted_wifi_config.h"
 
 /** Exported variables **/
@@ -39,13 +31,12 @@ struct esp_remote_channel_config {
 };
 
 
-
 /** Inline functions **/
 
 /** Exported Functions **/
-esp_err_t esp_hosted_init(void(*esp_hosted_up_cb)(void));
+esp_err_t esp_hosted_init(void);
 esp_err_t esp_hosted_deinit(void);
-esp_err_t esp_hosted_reinit(void(*esp_hosted_up_cb)(void));
+esp_err_t esp_hosted_reinit(void);
 
 esp_err_t esp_hosted_setup(void);
 esp_err_t esp_hosted_slave_reset(void);
