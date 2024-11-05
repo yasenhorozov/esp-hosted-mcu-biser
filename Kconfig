@@ -457,15 +457,15 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 80000
 				help
 					"Value can only be configured for some targets. Displayed always for reference."
 
-			config ESP_SDIO_PIN_D1
-				int "D1 GPIO number"
-				default 35 if IDF_TARGET_ESP32S3
-				default 15 if IDF_TARGET_ESP32P4
-				range 4 4 if IDF_TARGET_ESP32
-				help
-					"Value can only be configured for some targets. Displayed always for reference."
-
 			if ESP_SDIO_4_BIT_BUS
+				config ESP_SDIO_PIN_D1
+					int "D1 GPIO number"
+					default 35 if IDF_TARGET_ESP32S3
+					default 15 if IDF_TARGET_ESP32P4
+					range 4 4 if IDF_TARGET_ESP32
+					help
+						"Value can only be configured for some targets. Displayed always for reference."
+
 				config ESP_SDIO_PIN_D2
 					int "D2 GPIO number"
 					default 20 if IDF_TARGET_ESP32S3
@@ -481,8 +481,18 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 80000
 					range 13 13 if IDF_TARGET_ESP32
 					help
 						"Value can only be configured for some targets. Displayed always for reference."
-
 			endif
+
+			if !ESP_SDIO_4_BIT_BUS
+				config ESP_SDIO_PIN_D1
+					int "D1 GPIO number (Interrupt Line)"
+					default 35 if IDF_TARGET_ESP32S3
+					default 15 if IDF_TARGET_ESP32P4
+					range 4 4 if IDF_TARGET_ESP32
+					help
+						"Value can only be configured for some targets. Displayed always for reference."
+			endif
+
 
 			config ESP_SDIO_TX_Q_SIZE
 				int "Host SDIO Tx queue size"
