@@ -1,7 +1,9 @@
 /*
- * SPDX-FileCopyrightText: 2015-2023 Espressif Systems (Shanghai) CO LTD
- * SPDX-License-Identifier: Apache-2.0
- */
+* SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+*
+* SPDX-License-Identifier: Apache-2.0
+*/
+
 #ifndef __ESP_HOSTED_CONFIG_H__
 #define __ESP_HOSTED_CONFIG_H__
 
@@ -9,6 +11,13 @@
 #include "esp_task.h"
 #include "hosted_os_adapter.h"
 #include "adapter.h"
+
+
+#define H_TRANSPORT_NONE 0
+#define H_TRANSPORT_SDIO 1
+#define H_TRANSPORT_SPI_HD 2
+#define H_TRANSPORT_SPI 3
+#define H_TRANSPORT_UART 4
 
 #ifdef CONFIG_ESP_SDIO_HOST_INTERFACE
 #include "driver/sdmmc_host.h"
@@ -31,10 +40,10 @@ enum {
     H_GPIO_INTR_MAX,
 };
 
-
-
+#undef H_TRANSPORT_IN_USE
 
 #ifdef CONFIG_ESP_SPI_HOST_INTERFACE
+#define H_TRANSPORT_IN_USE H_TRANSPORT_SPI
 /*  -------------------------- SPI Master Config start ----------------------  */
 /*
 Pins in use. The SPI Master can use the GPIO mux,
@@ -104,6 +113,7 @@ so feel free to change these if needed.
 #endif
 
 #ifdef CONFIG_ESP_SDIO_HOST_INTERFACE
+#define H_TRANSPORT_IN_USE H_TRANSPORT_SDIO
 /*  -------------------------- SDIO Host Config start -----------------------  */
 
 #ifdef CONFIG_SOC_SDMMC_USE_GPIO_MATRIX
@@ -115,14 +125,29 @@ so feel free to change these if needed.
 #define H_SDMMC_HOST_SLOT                            SDMMC_HOST_SLOT_1
 
 #ifdef H_SDIO_SOC_USE_GPIO_MATRIX
-#define H_SDIO_PIN_CLK                               CONFIG_ESP_SDIO_PIN_CLK
-#define H_SDIO_PIN_CMD                               CONFIG_ESP_SDIO_PIN_CMD
-#define H_SDIO_PIN_D0                                CONFIG_ESP_SDIO_PIN_D0
-#define H_SDIO_PIN_D1                                CONFIG_ESP_SDIO_PIN_D1
-#if (H_SDIO_BUS_WIDTH == 4)
-#define H_SDIO_PIN_D2                                CONFIG_ESP_SDIO_PIN_D2
-#define H_SDIO_PIN_D3                                CONFIG_ESP_SDIO_PIN_D3
-#endif
+  #define H_SDIO_PIN_CLK                             CONFIG_ESP_SDIO_PIN_CLK
+  #define H_SDIO_PIN_CMD                             CONFIG_ESP_SDIO_PIN_CMD
+  #define H_SDIO_PIN_D0                              CONFIG_ESP_SDIO_PIN_D0
+  #define H_SDIO_PIN_D1                              CONFIG_ESP_SDIO_PIN_D1
+  #if (H_SDIO_BUS_WIDTH == 4)
+    #define H_SDIO_PIN_D2                            CONFIG_ESP_SDIO_PIN_D2
+    #define H_SDIO_PIN_D3                            CONFIG_ESP_SDIO_PIN_D3
+  #else
+    #define H_SDIO_PIN_D2                            -1
+    #define H_SDIO_PIN_D3                            -1
+  #endif
+#else
+  #define H_SDIO_PIN_CLK                             -1
+  #define H_SDIO_PIN_CMD                             -1
+  #define H_SDIO_PIN_D0                              -1
+  #define H_SDIO_PIN_D1                              -1
+  #if (H_SDIO_BUS_WIDTH == 4)
+    #define H_SDIO_PIN_D2                            -1
+    #define H_SDIO_PIN_D3                            -1
+  #else
+    #define H_SDIO_PIN_D2                            -1
+    #define H_SDIO_PIN_D3                            -1
+  #endif
 #endif
 
 #define H_SDIO_HOST_STREAMING_MODE 1
@@ -179,6 +204,7 @@ so feel free to change these if needed.
 #endif
 
 #ifdef CONFIG_ESP_SPI_HD_HOST_INTERFACE
+#define H_TRANSPORT_IN_USE H_TRANSPORT_SPI_HD
 /*  -------------------------- SPI_HD Host Config start -----------------------  */
 
 #define H_SPI_HD_HOST_INTERFACE 1
@@ -211,6 +237,9 @@ enum {
 #if (CONFIG_ESP_SPI_HD_INTERFACE_NUM_DATA_LINES == 4)
 #define H_SPI_HD_PIN_D2                              CONFIG_ESP_SPI_HD_GPIO_D2
 #define H_SPI_HD_PIN_D3                              CONFIG_ESP_SPI_HD_GPIO_D3
+#else
+#define H_SPI_HD_PIN_D2                              -1
+#define H_SPI_HD_PIN_D3                              -1
 #endif
 #define H_SPI_HD_PIN_CS                              CONFIG_ESP_SPI_HD_GPIO_CS
 #define H_SPI_HD_PIN_CLK                             CONFIG_ESP_SPI_HD_GPIO_CLK
@@ -234,6 +263,7 @@ enum {
 #endif
 
 #ifdef CONFIG_ESP_UART_HOST_INTERFACE
+#define H_TRANSPORT_IN_USE H_TRANSPORT_UART
 /*  -------------------------- UART Host Config start -------------------------  */
 
 #define H_UART_HOST_TRANSPORT 1
@@ -313,5 +343,9 @@ enum {
 #else
 #define H_TEST_RAW_TP_DIR (ESP_TEST_RAW_TP_NONE)
 #endif
+
+
+esp_err_t esp_hosted_set_default_config(void);
+bool esp_hosted_is_config_valid(void);
 
 #endif /*__ESP_HOSTED_CONFIG_H__*/

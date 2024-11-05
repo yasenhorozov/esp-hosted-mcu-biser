@@ -3,8 +3,8 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 	set(FG_root_dir ".")
 	set(host_dir "${FG_root_dir}/host")
 
-	set(COMPONENT_ADD_INCLUDEDIRS "${host_dir}" "${host_dir}/port" "${host_dir}/api")
-	set(COMPONENT_SRCS "${host_dir}/esp_hosted_host_init.c" "${host_dir}/api/esp_wifi_weak.c" "${host_dir}/api/esp_hosted_api.c" "${host_dir}/drivers/transport/transport_drv.c" "${host_dir}/drivers/serial/serial_ll_if.c" "${host_dir}/utils/common.c" "${host_dir}/utils/util.c" "${host_dir}/utils/stats.c" "${host_dir}/port/os_wrapper.c" "${host_dir}/drivers/serial/serial_drv.c")
+	set(COMPONENT_ADD_INCLUDEDIRS "${host_dir}" "${host_dir}/api")
+	set(COMPONENT_SRCS "${host_dir}/esp_hosted_host_init.c" "${host_dir}/api/esp_wifi_weak.c" "${host_dir}/api/esp_hosted_api.c" "${host_dir}/drivers/transport/transport_drv.c" "${host_dir}/drivers/serial/serial_ll_if.c" "${host_dir}/utils/common.c" "${host_dir}/utils/util.c" "${host_dir}/utils/stats.c""${host_dir}/drivers/serial/serial_drv.c")
 
 	list(APPEND COMPONENT_ADD_INCLUDEDIRS "." "${host_dir}/api" "${host_dir}/drivers/transport" "${host_dir}/drivers/transport/spi" "${host_dir}/drivers/transport/sdio" "${host_dir}/drivers/serial" "${host_dir}/utils")
 
@@ -43,14 +43,31 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 
 	# transport files
 	if(CONFIG_ESP_SDIO_HOST_INTERFACE)
-		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/sdio/sdio_drv.c" "${host_dir}/port/sdio_wrapper.c")
+		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/sdio/sdio_drv.c")
 	elseif(CONFIG_ESP_SPI_HD_HOST_INTERFACE)
-		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/spi_hd/spi_hd_drv.c" "${host_dir}/port/spi_hd_wrapper.c")
+		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/spi_hd/spi_hd_drv.c")
 	elseif(CONFIG_ESP_SPI_HOST_INTERFACE)
-		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/spi/spi_drv.c" "${host_dir}/port/spi_wrapper.c")
+		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/spi/spi_drv.c")
 	elseif(CONFIG_ESP_UART_HOST_INTERFACE)
-		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/uart/uart_drv.c" "${host_dir}/port/uart_wrapper.c")
+		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/uart/uart_drv.c")
 	endif()
+
+	# config files
+	list(APPEND COMPONENT_ADD_INCLUDEDIRS "${host_dir}/port")
+	list(APPEND COMPONENT_SRCS "${host_dir}/port/esp_hosted_config.c" "${host_dir}/port/esp_hosted_transport_config.c")
+
+	# transport port files
+	list(APPEND COMPONENT_SRCS "${host_dir}/port/os_wrapper.c")
+	if(CONFIG_ESP_SDIO_HOST_INTERFACE)
+		list(APPEND COMPONENT_SRCS "${host_dir}/port/sdio_wrapper.c")
+	elseif(CONFIG_ESP_SPI_HD_HOST_INTERFACE)
+		list(APPEND COMPONENT_SRCS "${host_dir}/port/spi_hd_wrapper.c")
+	elseif(CONFIG_ESP_SPI_HOST_INTERFACE)
+		list(APPEND COMPONENT_SRCS "${host_dir}/port/spi_wrapper.c")
+	elseif(CONFIG_ESP_UART_HOST_INTERFACE)
+		list(APPEND COMPONENT_SRCS "${host_dir}/port/uart_wrapper.c")
+	endif()
+
 endif()
 
 idf_component_register(SRCS ${COMPONENT_SRCS}

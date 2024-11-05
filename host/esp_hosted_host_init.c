@@ -1,3 +1,9 @@
+/*
+* SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+*
+* SPDX-License-Identifier: Apache-2.0
+*/
+
 #include "os_header.h"
 #include "os_wrapper.h"
 #include "esp_log.h"
@@ -10,7 +16,7 @@ DEFINE_LOG_TAG(host_init);
 static void __attribute__((constructor)) esp_hosted_host_init(void)
 {
 	ESP_LOGI(TAG, "ESP Hosted : Host chip_ip[%d]", CONFIG_IDF_FIRMWARE_CHIP_ID);
-	ESP_ERROR_CHECK(esp_hosted_init(NULL));
+	ESP_ERROR_CHECK(esp_hosted_init());
 }
 
 static void __attribute__((destructor)) esp_hosted_host_deinit(void)
