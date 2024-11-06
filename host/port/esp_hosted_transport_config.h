@@ -204,30 +204,30 @@ bool esp_hosted_transport_is_config_valid(void);
 #if H_TRANSPORT_SDIO == H_TRANSPORT_IN_USE
 /* SDIO functions */
 esp_hosted_transport_err_t esp_hosted_sdio_get_config(struct esp_hosted_sdio_config *config);
-esp_hosted_transport_err_t esp_hosted_sdio_set_config(const struct esp_hosted_sdio_config *config);
+esp_hosted_transport_err_t esp_hosted_sdio_set_config(struct esp_hosted_sdio_config *config) __attribute__((warn_unused_result));
 
-esp_hosted_transport_err_t esp_hosted_sdio_iomux_set_config(const struct esp_hosted_sdio_config *config);
+esp_hosted_transport_err_t esp_hosted_sdio_iomux_set_config(struct esp_hosted_sdio_config *config) __attribute__((warn_unused_result));
 #endif
 
 #if H_TRANSPORT_SPI_HD == H_TRANSPORT_IN_USE
 /* SPI Half Duplex functions */
 esp_hosted_transport_err_t esp_hosted_spi_hd_get_config(struct esp_hosted_spi_hd_config *config);
-esp_hosted_transport_err_t esp_hosted_spi_hd_set_config(const struct esp_hosted_spi_hd_config *config);
+esp_hosted_transport_err_t esp_hosted_spi_hd_set_config(struct esp_hosted_spi_hd_config *config) __attribute__((warn_unused_result));
 
 esp_hosted_transport_err_t esp_hosted_spi_hd_2lines_get_config(struct esp_hosted_spi_hd_config *config);
-esp_hosted_transport_err_t esp_hosted_spi_hd_2lines_set_config(const struct esp_hosted_spi_hd_config *config);
+esp_hosted_transport_err_t esp_hosted_spi_hd_2lines_set_config(struct esp_hosted_spi_hd_config *config) __attribute__((warn_unused_result));
 #endif
 
 #if H_TRANSPORT_SPI == H_TRANSPORT_IN_USE
 /* SPI Full Duplex functions */
 esp_hosted_transport_err_t esp_hosted_spi_get_config(struct esp_hosted_spi_config *config);
-esp_hosted_transport_err_t esp_hosted_spi_set_config(const struct esp_hosted_spi_config *config);
+esp_hosted_transport_err_t esp_hosted_spi_set_config(struct esp_hosted_spi_config *config) __attribute__((warn_unused_result));
 #endif
 
 #if H_TRANSPORT_UART == H_TRANSPORT_IN_USE
 /* UART functions */
 esp_hosted_transport_err_t esp_hosted_uart_get_config(struct esp_hosted_uart_config *config);
-esp_hosted_transport_err_t esp_hosted_uart_set_config(const struct esp_hosted_uart_config *config);
+esp_hosted_transport_err_t esp_hosted_uart_set_config(struct esp_hosted_uart_config *config) __attribute__((warn_unused_result));
 #endif
 
 #endif /* __ESP_HOSTED_TRANSPORT_CONFIG_H__ */
