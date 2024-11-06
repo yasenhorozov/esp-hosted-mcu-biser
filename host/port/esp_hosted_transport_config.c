@@ -25,13 +25,13 @@ esp_hosted_transport_err_t esp_hosted_transport_set_default_config(void)
     memset(&s_transport_config, 0, sizeof(s_transport_config));
 
 #if H_TRANSPORT_IN_USE == H_TRANSPORT_SDIO
-    esp_hosted_sdio_set_config(NULL);
+    ESP_ERROR_CHECK(esp_hosted_sdio_set_config(NULL));
 #elif H_TRANSPORT_IN_USE == H_TRANSPORT_SPI_HD
-    esp_hosted_spi_hd_set_config(NULL);
+    ESP_ERROR_CHECK(esp_hosted_spi_hd_set_config(NULL));
 #elif H_TRANSPORT_IN_USE == H_TRANSPORT_SPI
-    esp_hosted_spi_set_config(NULL);
+    ESP_ERROR_CHECK(esp_hosted_spi_set_config(NULL));
 #elif H_TRANSPORT_IN_USE == H_TRANSPORT_UART
-    esp_hosted_uart_set_config(NULL);
+    ESP_ERROR_CHECK(esp_hosted_uart_set_config(NULL));
 #else
     return ESP_TRANSPORT_ERR_INVALID_STATE;
 #endif
@@ -59,11 +59,10 @@ esp_hosted_transport_err_t esp_hosted_sdio_get_config(struct esp_hosted_sdio_con
     return ESP_TRANSPORT_OK;
 }
 
-esp_hosted_transport_err_t esp_hosted_sdio_set_config(const struct esp_hosted_sdio_config *config)
+esp_hosted_transport_err_t esp_hosted_sdio_set_config(struct esp_hosted_sdio_config *config)
 {
     if (esp_hosted_transport_config_set) {
         ESP_LOGE(TAG, "Transport already initialized (through constructor?), reconfiguring not allowed");
-        assert(!esp_hosted_transport_config_set);
         return ESP_TRANSPORT_ERR_ALREADY_SET; /* Error: already set */
     }
 
@@ -77,9 +76,10 @@ esp_hosted_transport_err_t esp_hosted_sdio_set_config(const struct esp_hosted_sd
     return ESP_TRANSPORT_OK;
 }
 
-esp_hosted_transport_err_t esp_hosted_sdio_iomux_set_config(const struct esp_hosted_sdio_config *config)
+esp_hosted_transport_err_t esp_hosted_sdio_iomux_set_config(struct esp_hosted_sdio_config *config)
 {
     if (esp_hosted_transport_config_set) {
+        ESP_LOGE(TAG, "Transport already initialized (through constructor?), reconfiguring not allowed");
         return ESP_TRANSPORT_ERR_ALREADY_SET; /* Error: already set */
     }
 
@@ -106,9 +106,10 @@ esp_hosted_transport_err_t esp_hosted_spi_hd_get_config(struct esp_hosted_spi_hd
     return ESP_TRANSPORT_OK;
 }
 
-esp_hosted_transport_err_t esp_hosted_spi_hd_set_config(const struct esp_hosted_spi_hd_config *config)
+esp_hosted_transport_err_t esp_hosted_spi_hd_set_config(struct esp_hosted_spi_hd_config *config)
 {
     if (esp_hosted_transport_config_set) {
+        ESP_LOGE(TAG, "Transport already initialized (through constructor?), reconfiguring not allowed");
         return ESP_TRANSPORT_ERR_ALREADY_SET; /* Error: already set */
     }
 
@@ -132,9 +133,10 @@ esp_hosted_transport_err_t esp_hosted_spi_hd_2lines_get_config(struct esp_hosted
     return ESP_TRANSPORT_OK;
 }
 
-esp_hosted_transport_err_t esp_hosted_spi_hd_2lines_set_config(const struct esp_hosted_spi_hd_config *config)
+esp_hosted_transport_err_t esp_hosted_spi_hd_2lines_set_config(struct esp_hosted_spi_hd_config *config)
 {
     if (esp_hosted_transport_config_set) {
+        ESP_LOGE(TAG, "Transport already initialized (through constructor?), reconfiguring not allowed");
         return ESP_TRANSPORT_ERR_ALREADY_SET; /* Error: already set */
     }
 
@@ -161,9 +163,10 @@ esp_hosted_transport_err_t esp_hosted_spi_get_config(struct esp_hosted_spi_confi
     return ESP_TRANSPORT_OK;
 }
 
-esp_hosted_transport_err_t esp_hosted_spi_set_config(const struct esp_hosted_spi_config *config)
+esp_hosted_transport_err_t esp_hosted_spi_set_config(struct esp_hosted_spi_config *config)
 {
     if (esp_hosted_transport_config_set) {
+        ESP_LOGE(TAG, "Transport already initialized (through constructor?), reconfiguring not allowed");
         return ESP_TRANSPORT_ERR_ALREADY_SET; /* Error: already set */
     }
 
@@ -189,9 +192,10 @@ esp_hosted_transport_err_t esp_hosted_uart_get_config(struct esp_hosted_uart_con
     return ESP_TRANSPORT_OK;
 }
 
-esp_hosted_transport_err_t esp_hosted_uart_set_config(const struct esp_hosted_uart_config *config)
+esp_hosted_transport_err_t esp_hosted_uart_set_config(struct esp_hosted_uart_config *config)
 {
     if (esp_hosted_transport_config_set) {
+        ESP_LOGE(TAG, "Transport already initialized (through constructor?), reconfiguring not allowed");
         return ESP_TRANSPORT_ERR_ALREADY_SET; /* Error: already set */
     }
 
