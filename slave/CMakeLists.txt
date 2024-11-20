@@ -12,7 +12,7 @@ message(************************************************************************
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 set(APPEND EXCLUDE_COMPONENTS lwip esp_netif)
 #set(COMPONENTS main nvs_flash protocomm esp_rom)
-set(COMPONENTS esp_timer esptool_py bootloader main nvs_flash esp_rom esp_wifi protocomm )
+set(COMPONENTS esp_timer esptool_py bootloader main nvs_flash esp_rom esp_wifi protocomm driver)
 #set(COMPONENTS main nvs_flash protocomm esp_gdbstub) # incase gdbsub needed
 project(network_adapter)
 idf_build_set_property(COMPILE_OPTIONS "-fdiagnostics-color=always" APPEND)
