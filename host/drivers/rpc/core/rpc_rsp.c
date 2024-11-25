@@ -523,6 +523,16 @@ int rpc_parse_rsp(Rpc *rpc_msg, ctrl_cmd_t *app_resp)
 		app_resp->u.wifi_sta_get_aid.aid =
 			rpc_msg->resp_wifi_sta_get_aid->aid;
 		break;
+	} case RPC_ID__Resp_GetCoprocessorFwVersion: {
+		RPC_FAIL_ON_NULL(resp_get_coprocessor_fwversion);
+		RPC_ERR_IN_RESP(resp_get_coprocessor_fwversion);
+		app_resp->u.coprocessor_fwversion.major1 =
+			rpc_msg->resp_get_coprocessor_fwversion->major1;
+		app_resp->u.coprocessor_fwversion.minor1 =
+			rpc_msg->resp_get_coprocessor_fwversion->minor1;
+		app_resp->u.coprocessor_fwversion.patch1 =
+			rpc_msg->resp_get_coprocessor_fwversion->patch1;
+		break;
 #if H_WIFI_DUALBAND_SUPPORT
 	} case RPC_ID__Resp_WifiSetProtocols: {
 		RPC_FAIL_ON_NULL(resp_wifi_set_protocols);

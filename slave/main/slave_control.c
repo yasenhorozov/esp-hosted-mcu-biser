@@ -24,6 +24,8 @@
 #include "rpc_common.h"
 #include "adapter.h"
 
+#include "coprocessor_fw_version.h"
+
 #define MAC_STR_LEN                 17
 #define MAC2STR(a)                  (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MACSTR                      "%02x:%02x:%02x:%02x:%02x:%02x"
@@ -1792,6 +1794,20 @@ static esp_err_t req_wifi_get_band_mode(Rpc *req, Rpc *resp, void *priv_data)
 #endif
 }
 
+static esp_err_t req_get_coprocessor_fw_version(Rpc *req, Rpc *resp, void *priv_data)
+{
+	RPC_TEMPLATE_SIMPLE(RpcRespGetCoprocessorFwVersion, resp_get_coprocessor_fwversion,
+			RpcReqGetCoprocessorFwVersion, req_get_coprocessor_fwversion,
+			rpc__resp__get_coprocessor_fw_version__init);
+
+	resp_payload->major1 = PROJECT_VERSION_MAJOR_1;
+	resp_payload->minor1 = PROJECT_VERSION_MINOR_1;
+	resp_payload->patch1 = PROJECT_VERSION_PATCH_1;
+	resp_payload->resp = ESP_OK;
+
+	return ESP_OK;
+}
+
 #if 0
 static esp_err_t req_wifi_(Rpc *req, Rpc *resp, void *priv_data)
 {
@@ -2013,6 +2029,10 @@ static esp_rpc_req_t req_table[] = {
 	{
 		.req_num = RPC_ID__Req_WifiGetBandMode,
 		.command_handler = req_wifi_get_band_mode
+	},
+	{
+		.req_num = RPC_ID__Req_GetCoprocessorFwVersion,
+		.command_handler = req_get_coprocessor_fw_version
 	},
 };
 
@@ -2287,6 +2307,9 @@ static void esp_rpc_cleanup(Rpc *resp)
 			break;
 		} case RPC_ID__Resp_WifiGetBandMode: {
 			mem_free(resp->resp_wifi_get_bandmode);
+			break;
+		} case RPC_ID__Resp_GetCoprocessorFwVersion: {
+			mem_free(resp->resp_get_coprocessor_fwversion);
 			break;
 		} case (RPC_ID__Event_ESPInit) : {
 			mem_free(resp->event_esp_init);

@@ -437,6 +437,10 @@ esp_err_t esp_hosted_ota(const char* image_url)
 	return rpc_ota(image_url);
 }
 
+esp_err_t esp_hosted_get_coprocessor_fwversion(esp_hosted_coprocessor_fwver_t *ver_info)
+{
+	return rpc_get_coprocessor_fwversion(ver_info);
+}
 
 /* esp_err_t esp_wifi_remote_scan_get_ap_record(wifi_ap_record_t *ap_record)
 esp_err_t esp_wifi_remote_set_csi(_Bool en)

@@ -151,6 +151,12 @@ typedef struct {
 } rpc_wifi_protocols_t;
 
 typedef struct {
+	uint32_t major1;
+	uint32_t minor1;
+	uint32_t patch1;
+} rpc_coprocessor_fwversion_t;
+
+typedef struct {
 	wifi_interface_t ifx;
 	wifi_bandwidth_t ghz_2g;
 	wifi_bandwidth_t ghz_5g;
@@ -223,6 +229,8 @@ typedef struct Ctrl_cmd_t {
 		rpc_wifi_protocol           wifi_protocol;
 
 		rpc_wifi_sta_get_aid_t      wifi_sta_get_aid;
+
+		rpc_coprocessor_fwversion_t coprocessor_fwversion;
 
 #if H_WIFI_DUALBAND_SUPPORT
 		rpc_wifi_protocols_t        wifi_protocols;
@@ -433,6 +441,9 @@ ctrl_cmd_t * ota_write(ctrl_cmd_t *req);
  * sets newly written OTA partition as boot partition for next boot,
  * Creates timer which reset ESP32 after 5 sec */
 ctrl_cmd_t * ota_end(ctrl_cmd_t *req);
+
+/* Gets the co-processor FW Version */
+ctrl_cmd_t * get_coprocessor_fwversion(ctrl_cmd_t *req);
 
 /* TODO: add descriptions */
 ctrl_cmd_t * wifi_init(ctrl_cmd_t *req);

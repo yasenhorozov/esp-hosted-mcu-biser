@@ -39,6 +39,8 @@
 #include "esp_timer.h"
 #include "mempool.h"
 
+#include "coprocessor_fw_version.h"
+
 static const char *TAG = "fg_mcu_slave";
 
 
@@ -97,7 +99,7 @@ static void print_firmware_version()
 {
 	ESP_LOGI(TAG, "*********************************************************************");
 	ESP_LOGI(TAG, "                ESP-Hosted-MCU Slave FW version :: %d.%d.%d                        ",
-			PROJECT_VERSION_MAJOR_1, PROJECT_VERSION_MAJOR_2, PROJECT_VERSION_MINOR);
+			PROJECT_VERSION_MAJOR_1, PROJECT_VERSION_MINOR_1, PROJECT_VERSION_PATCH_1);
 #if CONFIG_ESP_SPI_HOST_INTERFACE
   #if BLUETOOTH_UART
 	ESP_LOGI(TAG, "                Transport used :: SPI + UART                    ");

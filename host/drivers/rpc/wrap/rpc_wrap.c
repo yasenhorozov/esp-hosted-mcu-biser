@@ -31,6 +31,7 @@
 #include "esp_log.h"
 #include "esp_http_client.h"
 #include "esp_hosted_wifi_config.h"
+#include "esp_hosted_api.h"
 
 DEFINE_LOG_TAG(rpc_wrap);
 static char* OTA_TAG = "h_ota";
@@ -471,7 +472,8 @@ int rpc_rsp_callback(ctrl_cmd_t * app_resp)
 	case RPC_ID__Resp_WifiSetBand:
 	case RPC_ID__Resp_WifiGetBand:
 	case RPC_ID__Resp_WifiSetBandMode:
-	case RPC_ID__Resp_WifiGetBandMode: {
+	case RPC_ID__Resp_WifiGetBandMode:
+	case RPC_ID__Resp_GetCoprocessorFwVersion: {
 		/* Intended fallthrough */
 		break;
 	} default: {
@@ -1056,6 +1058,22 @@ esp_err_t rpc_ota(const char* image_url)
 	return ret;
 }
 #endif
+
+esp_err_t rpc_get_coprocessor_fwversion(esp_hosted_coprocessor_fwver_t *ver_info)
+{
+	/* implemented synchronous */
+	ctrl_cmd_t *req = RPC_DEFAULT_REQ();
+	ctrl_cmd_t *resp = NULL;
+
+	resp = get_coprocessor_fwversion(req);
+	if (resp && resp->resp_event_status == SUCCESS) {
+		ver_info->major1 = resp->u.coprocessor_fwversion.major1;
+		ver_info->minor1 = resp->u.coprocessor_fwversion.minor1;
+		ver_info->patch1 = resp->u.coprocessor_fwversion.patch1;
+	}
+
+	return rpc_rsp_callback(resp);
+}
 
 int rpc_wifi_set_max_tx_power(int8_t in_power)
 {
