@@ -416,6 +416,10 @@ int compose_rpc_req(Rpc *req, ctrl_cmd_t *app_req, int32_t *failure_status)
 				rpc__req__wifi_get_protocol__init);
 		req_payload->ifx = app_req->u.wifi_protocol.ifx;
 		break;
+	} case RPC_ID__Req_GetCoprocessorFwVersion: {
+		RPC_ALLOC_ASSIGN(RpcReqGetCoprocessorFwVersion, req_get_coprocessor_fwversion,
+				rpc__req__get_coprocessor_fw_version__init);
+		break;
 #if H_WIFI_DUALBAND_SUPPORT
 	} case RPC_ID__Req_WifiSetProtocols: {
 		RPC_ALLOC_ASSIGN(RpcReqWifiSetProtocols, req_wifi_set_protocols,

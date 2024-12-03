@@ -25,6 +25,8 @@ extern "C" {
 #include "common.h"
 #include "esp_wifi.h"
 #include "esp_hosted_wifi_config.h"
+#include "esp_hosted_api.h"
+#include "esp_hosted_api_types.h"
 
 /** Exported variables **/
 
@@ -78,6 +80,7 @@ esp_err_t rpc_wifi_set_max_tx_power(int8_t power);
 esp_err_t rpc_wifi_get_max_tx_power(int8_t *power);
 esp_err_t rpc_wifi_sta_get_aid(uint16_t *aid);
 esp_err_t rpc_ota(const char* image_url);
+esp_err_t rpc_get_coprocessor_fwversion(esp_hosted_coprocessor_fwver_t *ver_info);
 
 #if H_WIFI_DUALBAND_SUPPORT
 esp_err_t rpc_wifi_set_band(wifi_band_t band);

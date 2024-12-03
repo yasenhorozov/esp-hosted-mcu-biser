@@ -162,6 +162,8 @@ typedef struct RpcReqWifiSetBandMode RpcReqWifiSetBandMode;
 typedef struct RpcRespWifiSetBandMode RpcRespWifiSetBandMode;
 typedef struct RpcReqWifiGetBandMode RpcReqWifiGetBandMode;
 typedef struct RpcRespWifiGetBandMode RpcRespWifiGetBandMode;
+typedef struct RpcReqGetCoprocessorFwVersion RpcReqGetCoprocessorFwVersion;
+typedef struct RpcRespGetCoprocessorFwVersion RpcRespGetCoprocessorFwVersion;
 typedef struct RpcEventWifiEventNoArgs RpcEventWifiEventNoArgs;
 typedef struct RpcEventESPInit RpcEventESPInit;
 typedef struct RpcEventHeartbeat RpcEventHeartbeat;
@@ -569,13 +571,17 @@ typedef enum _RpcId {
    */
   RPC_ID__Req_WifiGetBandMode = 349,
   /*
+   *0x15e
+   */
+  RPC_ID__Req_GetCoprocessorFwVersion = 350,
+  /*
    * Add new control path command response before Req_Max
    * and update Req_Max 
    */
   /*
-   *0x15e
+   *0x15f
    */
-  RPC_ID__Req_Max = 350,
+  RPC_ID__Req_Max = 351,
   /*
    ** Response Msgs *
    */
@@ -675,11 +681,12 @@ typedef enum _RpcId {
   RPC_ID__Resp_WifiGetBand = 603,
   RPC_ID__Resp_WifiSetBandMode = 604,
   RPC_ID__Resp_WifiGetBandMode = 605,
+  RPC_ID__Resp_GetCoprocessorFwVersion = 606,
   /*
    * Add new control path command response before Resp_Max
    * and update Resp_Max 
    */
-  RPC_ID__Resp_Max = 606,
+  RPC_ID__Resp_Max = 607,
   /*
    ** Event Msgs *
    */
@@ -3012,6 +3019,28 @@ struct  RpcRespWifiGetBandMode
     , 0, 0 }
 
 
+struct  RpcReqGetCoprocessorFwVersion
+{
+  ProtobufCMessage base;
+};
+#define RPC__REQ__GET_COPROCESSOR_FW_VERSION__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&rpc__req__get_coprocessor_fw_version__descriptor) \
+     }
+
+
+struct  RpcRespGetCoprocessorFwVersion
+{
+  ProtobufCMessage base;
+  int32_t resp;
+  uint32_t major1;
+  uint32_t minor1;
+  uint32_t patch1;
+};
+#define RPC__RESP__GET_COPROCESSOR_FW_VERSION__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&rpc__resp__get_coprocessor_fw_version__descriptor) \
+    , 0, 0, 0, 0 }
+
+
 struct  RpcEventWifiEventNoArgs
 {
   ProtobufCMessage base;
@@ -3157,6 +3186,7 @@ typedef enum {
   RPC__PAYLOAD_REQ_WIFI_GET_BAND = 347,
   RPC__PAYLOAD_REQ_WIFI_SET_BANDMODE = 348,
   RPC__PAYLOAD_REQ_WIFI_GET_BANDMODE = 349,
+  RPC__PAYLOAD_REQ_GET_COPROCESSOR_FWVERSION = 350,
   RPC__PAYLOAD_RESP_GET_MAC_ADDRESS = 513,
   RPC__PAYLOAD_RESP_SET_MAC_ADDRESS = 514,
   RPC__PAYLOAD_RESP_GET_WIFI_MODE = 515,
@@ -3209,6 +3239,7 @@ typedef enum {
   RPC__PAYLOAD_RESP_WIFI_GET_BAND = 603,
   RPC__PAYLOAD_RESP_WIFI_SET_BANDMODE = 604,
   RPC__PAYLOAD_RESP_WIFI_GET_BANDMODE = 605,
+  RPC__PAYLOAD_RESP_GET_COPROCESSOR_FWVERSION = 606,
   RPC__PAYLOAD_EVENT_ESP_INIT = 769,
   RPC__PAYLOAD_EVENT_HEARTBEAT = 770,
   RPC__PAYLOAD_EVENT_AP_STA_CONNECTED = 771,
@@ -3292,6 +3323,7 @@ struct  Rpc
     RpcReqWifiGetBand *req_wifi_get_band;
     RpcReqWifiSetBandMode *req_wifi_set_bandmode;
     RpcReqWifiGetBandMode *req_wifi_get_bandmode;
+    RpcReqGetCoprocessorFwVersion *req_get_coprocessor_fwversion;
     /*
      ** Responses *
      */
@@ -3347,6 +3379,7 @@ struct  Rpc
     RpcRespWifiGetBand *resp_wifi_get_band;
     RpcRespWifiSetBandMode *resp_wifi_set_bandmode;
     RpcRespWifiGetBandMode *resp_wifi_get_bandmode;
+    RpcRespGetCoprocessorFwVersion *resp_get_coprocessor_fwversion;
     /*
      ** Notifications *
      */
@@ -6158,6 +6191,44 @@ RpcRespWifiGetBandMode *
 void   rpc__resp__wifi_get_band_mode__free_unpacked
                      (RpcRespWifiGetBandMode *message,
                       ProtobufCAllocator *allocator);
+/* RpcReqGetCoprocessorFwVersion methods */
+void   rpc__req__get_coprocessor_fw_version__init
+                     (RpcReqGetCoprocessorFwVersion         *message);
+size_t rpc__req__get_coprocessor_fw_version__get_packed_size
+                     (const RpcReqGetCoprocessorFwVersion   *message);
+size_t rpc__req__get_coprocessor_fw_version__pack
+                     (const RpcReqGetCoprocessorFwVersion   *message,
+                      uint8_t             *out);
+size_t rpc__req__get_coprocessor_fw_version__pack_to_buffer
+                     (const RpcReqGetCoprocessorFwVersion   *message,
+                      ProtobufCBuffer     *buffer);
+RpcReqGetCoprocessorFwVersion *
+       rpc__req__get_coprocessor_fw_version__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   rpc__req__get_coprocessor_fw_version__free_unpacked
+                     (RpcReqGetCoprocessorFwVersion *message,
+                      ProtobufCAllocator *allocator);
+/* RpcRespGetCoprocessorFwVersion methods */
+void   rpc__resp__get_coprocessor_fw_version__init
+                     (RpcRespGetCoprocessorFwVersion         *message);
+size_t rpc__resp__get_coprocessor_fw_version__get_packed_size
+                     (const RpcRespGetCoprocessorFwVersion   *message);
+size_t rpc__resp__get_coprocessor_fw_version__pack
+                     (const RpcRespGetCoprocessorFwVersion   *message,
+                      uint8_t             *out);
+size_t rpc__resp__get_coprocessor_fw_version__pack_to_buffer
+                     (const RpcRespGetCoprocessorFwVersion   *message,
+                      ProtobufCBuffer     *buffer);
+RpcRespGetCoprocessorFwVersion *
+       rpc__resp__get_coprocessor_fw_version__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   rpc__resp__get_coprocessor_fw_version__free_unpacked
+                     (RpcRespGetCoprocessorFwVersion *message,
+                      ProtobufCAllocator *allocator);
 /* RpcEventWifiEventNoArgs methods */
 void   rpc__event__wifi_event_no_args__init
                      (RpcEventWifiEventNoArgs         *message);
@@ -6772,6 +6843,12 @@ typedef void (*RpcReqWifiGetBandMode_Closure)
 typedef void (*RpcRespWifiGetBandMode_Closure)
                  (const RpcRespWifiGetBandMode *message,
                   void *closure_data);
+typedef void (*RpcReqGetCoprocessorFwVersion_Closure)
+                 (const RpcReqGetCoprocessorFwVersion *message,
+                  void *closure_data);
+typedef void (*RpcRespGetCoprocessorFwVersion_Closure)
+                 (const RpcRespGetCoprocessorFwVersion *message,
+                  void *closure_data);
 typedef void (*RpcEventWifiEventNoArgs_Closure)
                  (const RpcEventWifiEventNoArgs *message,
                   void *closure_data);
@@ -6958,6 +7035,8 @@ extern const ProtobufCMessageDescriptor rpc__req__wifi_set_band_mode__descriptor
 extern const ProtobufCMessageDescriptor rpc__resp__wifi_set_band_mode__descriptor;
 extern const ProtobufCMessageDescriptor rpc__req__wifi_get_band_mode__descriptor;
 extern const ProtobufCMessageDescriptor rpc__resp__wifi_get_band_mode__descriptor;
+extern const ProtobufCMessageDescriptor rpc__req__get_coprocessor_fw_version__descriptor;
+extern const ProtobufCMessageDescriptor rpc__resp__get_coprocessor_fw_version__descriptor;
 extern const ProtobufCMessageDescriptor rpc__event__wifi_event_no_args__descriptor;
 extern const ProtobufCMessageDescriptor rpc__event__espinit__descriptor;
 extern const ProtobufCMessageDescriptor rpc__event__heartbeat__descriptor;

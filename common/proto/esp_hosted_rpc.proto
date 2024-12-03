@@ -410,9 +410,11 @@ enum RpcId {
 	Req_WifiSetBandMode               = 348; //0x15c
 	Req_WifiGetBandMode               = 349; //0x15d
 
-	/* Add new control path command response before Req_Max
+	Req_GetCoprocessorFwVersion       = 350; //0x15e
+
+/* Add new control path command response before Req_Max
 	 * and update Req_Max */
-	Req_Max = 350; //0x15e
+	Req_Max = 351; //0x15f
 
 	/** Response Msgs **/
 	Resp_Base                         = 512;
@@ -532,9 +534,11 @@ enum RpcId {
 	Resp_WifiSetBandMode              = 604;
 	Resp_WifiGetBandMode              = 605;
 
+	Resp_GetCoprocessorFwVersion      = 606;
+
 	/* Add new control path command response before Resp_Max
 	 * and update Resp_Max */
-	Resp_Max = 606;
+	Resp_Max = 607;
 
 	/** Event Msgs **/
 	Event_Base = 768;
@@ -1487,6 +1491,16 @@ message Rpc_Resp_WifiGetBandMode {
 	uint32 bandmode = 2;
 }
 
+message Rpc_Req_GetCoprocessorFwVersion {
+}
+
+message Rpc_Resp_GetCoprocessorFwVersion {
+	int32 resp = 1;
+	uint32 major1 = 2;
+	uint32 minor1 = 3;
+	uint32 patch1 = 4;
+}
+
 /** Event structure **/
 
 message Rpc_Event_WifiEventNoArgs {
@@ -1621,6 +1635,8 @@ message Rpc {
 		Rpc_Req_WifiSetBandMode             req_wifi_set_bandmode             = 348;
 		Rpc_Req_WifiGetBandMode             req_wifi_get_bandmode             = 349;
 
+		Rpc_Req_GetCoprocessorFwVersion     req_get_coprocessor_fwversion     = 350;
+
 		/** Responses **/
 		Rpc_Resp_GetMacAddress              resp_get_mac_address               = 513;
 		Rpc_Resp_SetMacAddress              resp_set_mac_address               = 514;
@@ -1696,6 +1712,8 @@ message Rpc {
 		Rpc_Resp_WifiGetBand                resp_wifi_get_band                 = 603;
 		Rpc_Resp_WifiSetBandMode            resp_wifi_set_bandmode             = 604;
 		Rpc_Resp_WifiGetBandMode            resp_wifi_get_bandmode             = 605;
+
+		Rpc_Resp_GetCoprocessorFwVersion    resp_get_coprocessor_fwversion     = 606;
 
 		/** Notifications **/
 		Rpc_Event_ESPInit                   event_esp_init                     = 769;
