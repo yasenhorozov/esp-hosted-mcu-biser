@@ -735,7 +735,7 @@ static int set_sync_resp_sem(ctrl_cmd_t *app_req)
 	} else if (!app_req->rpc_rsp_cb) {
 		/* For sync, set sem */
 		app_req->rx_sem = g_h.funcs->_h_create_semaphore(1);
-		g_h.funcs->_h_get_semaphore(app_req->rx_sem, HOSTED_BLOCKING);
+		g_h.funcs->_h_get_semaphore(app_req->rx_sem, 0);
 
 		for (i = 0; i < MAX_SYNC_RPC_TRANSACTIONS; i++) {
 			if (!sync_rsp_table[i].uid) {
