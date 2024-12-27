@@ -478,7 +478,6 @@ static void verify_host_config_for_slave(uint8_t chip_type)
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C5;
 #else
 	ESP_LOGW(TAG, "Incorrect host config for ESP slave chipset[%x]", chip_type);
-	assert(0!=0);
 #endif
 	if (chip_type!=exp_chip_id) {
 		char slave_str[20], exp_str[20];
@@ -489,7 +488,7 @@ static void verify_host_config_for_slave(uint8_t chip_type)
 		get_chip_str_from_id(chip_type, slave_str);
 		get_chip_str_from_id(exp_chip_id, exp_str);
 		ESP_LOGE(TAG, "Identified slave [%s] != Expected [%s]\n\t\trun 'idf.py menuconfig' at host to reselect the slave?\n\t\tAborting.. ", slave_str, exp_str);
-		sleep(10);
+		g_h.funcs->_h_sleep(10);
 		assert(0!=0);
 	}
 }
@@ -503,7 +502,7 @@ esp_err_t send_slave_config(uint8_t host_cap, uint8_t firmware_chip_id,
 	uint16_t len = 0;
 	uint8_t *sendbuf = NULL;
 
-	sendbuf = malloc(512); /*Arbitrary number*/
+	sendbuf = g_h.funcs->_h_malloc(512);
 	assert(sendbuf);
 
 	/* Populate event data */
@@ -547,7 +546,7 @@ esp_err_t send_slave_config(uint8_t host_cap, uint8_t firmware_chip_id,
 	/* payload len = Event len + sizeof(event type) + sizeof(event len) */
 	len += 2;
 
-	return esp_hosted_tx(ESP_PRIV_IF, 0, sendbuf, len, H_BUFF_NO_ZEROCOPY, free);
+	return esp_hosted_tx(ESP_PRIV_IF, 0, sendbuf, len, H_BUFF_NO_ZEROCOPY, g_h.funcs->_h_free);
 }
 
 int process_init_event(uint8_t *evt_buf, uint16_t len)
