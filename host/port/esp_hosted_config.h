@@ -23,6 +23,10 @@
 #include "driver/sdmmc_host.h"
 #endif
 
+#ifdef CONFIG_ESP_UART_HOST_INTERFACE
+#include "hal/uart_types.h"
+#endif
+
 /* This file is to tune the main ESP-Hosted configurations.
  * In case you are not sure of some value, Let it be default.
  **/
