@@ -280,8 +280,6 @@ enum {
 #define H_UART_FLOWCTRL                              UART_HW_FLOWCTRL_DISABLE
 #define H_UART_CLK_SRC                               UART_SCLK_DEFAULT
 
-#define H_UART_EVENT_QUEUE_SIZE                      100
-
 #define H_UART_CHECKSUM                              CONFIG_ESP_UART_CHECKSUM
 #define H_UART_BAUD_RATE                             CONFIG_ESP_UART_BAUDRATE
 #define H_UART_TX_PIN                                CONFIG_ESP_UART_PIN_TX

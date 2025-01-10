@@ -39,6 +39,10 @@ static const char TAG[] = "uart_wrapper";
 #endif
 #endif
 
+#define UART_FAIL_IF_NULL_CTX(x) do { \
+		if (!x) return ESP_FAIL;      \
+	} while (0);
+
 // these values should match ESP_UART_PARITY values in Hosted Kconfig
 enum {
 	HOSTED_UART_PARITY_NONE = 0,
@@ -55,61 +59,31 @@ enum {
 
 // UART context structure
 typedef struct uart_ctx_t {
-	QueueHandle_t uart_queue; // queue handle to wait for UART events (RX, etc.)
+	int uart_port;
 } uart_ctx_t;
 
 static uart_ctx_t * ctx = NULL;
 
-int hosted_wait_rx_data(uint32_t ticks_to_wait)
+int hosted_uart_read(void * ctx, uint8_t *data, uint16_t size)
 {
-	uart_event_t event;
-	int res = -1;
+	uart_ctx_t * pctx;
 
-	// wait for uart event
-	if (xQueueReceive(ctx->uart_queue, (void *)&event, (TickType_t)ticks_to_wait)) {
-		switch (event.type) {
-		case UART_DATA:
-			res = event.size;
-			break;
-		case UART_FIFO_OVF:
-			ESP_LOGE(TAG, "uart hw fifo overflow");
-			uart_flush_input(H_UART_PORT);
-			xQueueReset(ctx->uart_queue);
-			break;
-		case UART_BUFFER_FULL:
-			ESP_LOGE(TAG, "uart ring buffer full");
-			uart_flush_input(H_UART_PORT);
-			xQueueReset(ctx->uart_queue);
-			break;
-		case UART_BREAK:
-			ESP_LOGW(TAG, "uart rx break");
-			res = 0;
-			break;
-		case UART_PARITY_ERR:
-			ESP_LOGE(TAG, "uart parity error");
-			break;
-		case UART_FRAME_ERR:
-			ESP_LOGW(TAG, "uart frame error");
-			break;
-		default:
-			ESP_LOGW(TAG, "uart event type: %d", event.type);
-			break;
-		}
-	} else {
-		// timeout
-		res = 0;
-	}
-	return res;
+	UART_FAIL_IF_NULL_CTX(ctx);
+
+	pctx = (uart_ctx_t *)ctx;
+
+	return uart_read_bytes(pctx->uart_port, data, size, portMAX_DELAY);
 }
 
-int hosted_uart_read(uint8_t *data, uint16_t size)
+int hosted_uart_write(void * ctx, uint8_t *data, uint16_t size)
 {
-	return uart_read_bytes(H_UART_PORT, data, size, portMAX_DELAY);
-}
+	uart_ctx_t * pctx;
 
-int hosted_uart_write(uint8_t *data, uint16_t size)
-{
-	return uart_write_bytes(H_UART_PORT, (const char*)data, size);
+	UART_FAIL_IF_NULL_CTX(ctx);
+
+	pctx = (uart_ctx_t *)ctx;
+
+	return uart_write_bytes(pctx->uart_port, (const char*)data, size);
 }
 
 void * hosted_uart_init(void)
@@ -177,41 +151,35 @@ void * hosted_uart_init(void)
 	};
 
 	ESP_ERROR_CHECK(uart_driver_install(H_UART_PORT, MAX_UART_BUFFER_SIZE, MAX_UART_BUFFER_SIZE,
-			H_UART_EVENT_QUEUE_SIZE, &ctx->uart_queue, 0));
+			0, NULL, 0));
 	ESP_ERROR_CHECK(uart_param_config(H_UART_PORT, &uart_config));
 	ESP_ERROR_CHECK(uart_set_pin(H_UART_PORT, H_UART_TX_PIN, H_UART_RX_PIN,
 			UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-	// lower rx receive threshold to prevent uart ring buffer overflow at high baud rates
-	if (H_UART_BAUD_RATE > 230400) {
-		ESP_ERROR_CHECK(uart_set_rx_full_threshold(H_UART_PORT, 64));
-	} else
-	if (H_UART_BAUD_RATE > 921600) {
-		ESP_ERROR_CHECK(uart_set_rx_full_threshold(H_UART_PORT, 32));
-	} else
-	if (H_UART_BAUD_RATE > 2500000) {
-		ESP_ERROR_CHECK(uart_set_rx_full_threshold(H_UART_PORT, 16));
-	}
 
 	ESP_LOGI(TAG, "UART GPIOs: Tx: %"PRIu16 ", Rx: %"PRIu16 ", Baud Rate %i",
 			H_UART_TX_PIN, H_UART_RX_PIN, H_UART_BAUD_RATE);
+
+	ctx->uart_port = H_UART_PORT;
 
 	return ctx;
 }
 
 esp_err_t hosted_uart_deinit(void *ctx)
 {
-  	esp_err_t ret;
+	esp_err_t ret;
+	uart_ctx_t * pctx;
 
-	if (!ctx)
-		return ESP_FAIL;
+	UART_FAIL_IF_NULL_CTX(ctx);
 
-	ret = uart_flush_input(H_UART_PORT);
+	pctx = (uart_ctx_t *)ctx;
+
+	ret = uart_flush_input(pctx->uart_port);
 	if (ret != ESP_OK)
 		ESP_LOGE(TAG, "%s: Failed to flush uart Rx", __func__);
-	ret = uart_wait_tx_done(H_UART_PORT, 100); // wait 100 RTOS ticks for Tx to be empty
+	ret = uart_wait_tx_done(pctx->uart_port, 100); // wait 100 RTOS ticks for Tx to be empty
 	if (ret != ESP_OK)
 		ESP_LOGE(TAG, "%s: Failed to flush uart Tx", __func__);
-	uart_driver_delete(H_UART_PORT);
+	uart_driver_delete(pctx->uart_port);
 
 	HOSTED_FREE(ctx);
 
