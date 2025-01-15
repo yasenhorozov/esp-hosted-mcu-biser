@@ -850,6 +850,5 @@ hosted_osi_funcs_t g_hosted_osi_funcs = {
 	._h_bus_init                 = hosted_uart_init                ,
 	._h_uart_read                = hosted_uart_read                ,
 	._h_uart_write               = hosted_uart_write               ,
-	._h_uart_wait_rx_data        = hosted_wait_rx_data             ,
 #endif
 };

@@ -93,7 +93,6 @@ struct esp_hosted_uart_config {
     uint8_t stop_bits;
     uint8_t flow_ctrl;
     uint8_t clk_src;
-    uint16_t event_queue_size;
     bool checksum_enable;
     uint32_t baud_rate;
     uint16_t tx_queue_size;
@@ -188,7 +187,6 @@ struct esp_hosted_transport_config {
         .stop_bits = H_UART_STOP_BITS, \
         .flow_ctrl = H_UART_FLOWCTRL, \
         .clk_src = H_UART_CLK_SRC, \
-        .event_queue_size = H_UART_EVENT_QUEUE_SIZE, \
         .checksum_enable = H_UART_CHECKSUM, \
         .baud_rate = H_UART_BAUD_RATE, \
         .tx_queue_size = H_UART_TX_QUEUE_SIZE, \
