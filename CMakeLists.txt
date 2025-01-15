@@ -35,7 +35,7 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 	# bt (NimBLE)
 	### TODO config for HCI over UART
 	list(APPEND COMPONENT_ADD_INCLUDEDIRS "${host_dir}/drivers/bt")
-	if(CONFIG_ESP_HCI_VHCI)
+	if(CONFIG_ESP_NIMBLE_HCI_VHCI OR CONFIG_ESP_BLUEDROID_HCI_VHCI)
 		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/bt/vhci_drv.c")
 	else()
 		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/bt/hci_stub_drv.c")

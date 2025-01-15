@@ -822,38 +822,59 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 	menu "Bluetooth Support"
 
 		comment "Following options must be set before this option can be enabled"
-			depends on !BT_ENABLED || !BT_NIMBLE_ENABLED || BT_CONTROLLER_ENABLED || BT_NIMBLE_TRANSPORT_UART
+			depends on !BT_ENABLED || BT_CONTROLLER_ONLY || (BT_NIMBLE_ENABLED && (BT_NIMBLE_TRANSPORT_UART || BT_CONTROLLER_ENABLED)) || (BT_BLUEDROID_ENABLED && BT_CONTROLLER_ENABLED)
 
 		comment "'Component config->Bluetooth' must be enabled"
 			depends on !BT_ENABLED
 
-		comment "'Component config->Bluetooth Host' must be set to 'NimBLE - BLE only'"
-			depends on !BT_NIMBLE_ENABLED
+		comment "'Component config->Bluetooth->Host' must be enabled"
+			depends on BT_ENABLED && BT_CONTROLLER_ONLY
 
 		comment "'Component config->Bluetooth->Controller' must be disabled"
-			depends on !BT_ENABLED || BT_CONTROLLER_ENABLED
+			depends on BT_ENABLED && BT_CONTROLLER_ENABLED
 
 		comment "'Component config->Bluetooth->NimBLE Options->Host-controller Transport->Uart Transport' must be disabled"
-			depends on !BT_ENABLED || !BT_NIMBLE_ENABLED || BT_NIMBLE_TRANSPORT_UART
+			depends on BT_NIMBLE_ENABLED && BT_NIMBLE_TRANSPORT_UART
+
+		if BT_ENABLED && BT_BLUEDROID_ENABLED && !BT_CONTROLLER_ENABLED
+			config ESP_ENABLE_BT_BLUEDROID
+				bool "Enable Hosted Bluedroid Bluetooth support"
+				default n
+				help
+					Enable Bluetooth Support for Bluedroid via Hosted
+
+			choice ESP_BLUEDROID_HCI_TYPE
+				bool "BT Bluedroid HCI Type"
+				default ESP_BLUEDROID_HCI_VHCI
+				depends on ESP_ENABLE_BT_BLUEDROID
+				help
+					Selects the HCI to use
+
+				config ESP_BLUEDROID_HCI_VHCI
+					bool "VHCI"
+					help
+						Bluetooth data is sent through the selected transport layer
+			endchoice
+		endif
 
 		if BT_ENABLED && BT_NIMBLE_ENABLED && !BT_CONTROLLER_ENABLED && !BT_NIMBLE_TRANSPORT_UART
-			config ESP_ENABLE_BT
-				bool "Enable Hosted Bluetooth support"
+			config ESP_ENABLE_BT_NIMBLE
+				bool "Enable Hosted Nimble Bluetooth support"
 				default n
 				help
 					Enable Bluetooth Support via Hosted
 
-			choice ESP_HCI_Type
-				bool "BT HCI Type"
-				default ESP_HCI_VHCI
-				depends on ESP_ENABLE_BT
+			choice ESP_NIMBLE_HCI_TYPE
+				bool "BT Nimble HCI Type"
+				default ESP_NIMBLE_HCI_VHCI
+				depends on ESP_ENABLE_BT_NIMBLE
 				help
 					Selects the HCI to use
 
-				config ESP_HCI_VHCI
+				config ESP_NIMBLE_HCI_VHCI
 					bool "VHCI"
 					help
-						Bluetooth data is sent through the selected transport layer (SPI/SDIO)
+						Bluetooth data is sent through the selected transport layer
 			endchoice
 		endif
 	endmenu
