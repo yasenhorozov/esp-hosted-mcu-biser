@@ -195,8 +195,8 @@ I (2663) NimBLE:
 
 ## Troubleshooting
 
-For any technical queries, please open an [issue](https://github.com/espressif/esp-hosted/issues) on ESP-Hosted on GitHub. We will get back to you soon.
+For any technical queries, please open an [issue](https://github.com/espressif/esp-hosted-mcu/issues) on ESP-Hosted on GitHub. We will get back to you soon.
 
 ## References
 
-* Bluetooth Implementation in ESP-Hosted: https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/bluetooth_implementation.md
+* Bluetooth Implementation in ESP-Hosted: https://github.com/espressif/esp-hosted-mcu/blob/main/docs/bluetooth_design.md
