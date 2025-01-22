@@ -43,14 +43,14 @@ static const char TAG[] = "uart_wrapper";
 		if (!x) return ESP_FAIL;      \
 	} while (0);
 
-// these values should match ESP_UART_PARITY values in Hosted Kconfig
+// these values should match ESP_HOSTED_UART_PARITY values in Hosted Kconfig
 enum {
 	HOSTED_UART_PARITY_NONE = 0,
 	HOSTED_UART_PARITY_EVEN = 1,
 	HOSTED_UART_PARITY_ODD = 2,
 };
 
-// these values should match ESP_UART_STOP_BITS values in Hosted Kconfig
+// these values should match ESP_HOSTED_UART_STOP_BITS values in Hosted Kconfig
 enum {
 	HOSTED_STOP_BITS_1 = 0,
 	HOSTED_STOP_BITS_1_5 = 1,

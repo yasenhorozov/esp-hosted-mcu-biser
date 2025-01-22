@@ -35,20 +35,20 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 	# bt (NimBLE)
 	### TODO config for HCI over UART
 	list(APPEND COMPONENT_ADD_INCLUDEDIRS "${host_dir}/drivers/bt")
-	if(CONFIG_ESP_NIMBLE_HCI_VHCI OR CONFIG_ESP_BLUEDROID_HCI_VHCI)
+	if(CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI OR CONFIG_ESP_HOSTED_BLUEDROID_HCI_VHCI)
 		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/bt/vhci_drv.c")
 	else()
 		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/bt/hci_stub_drv.c")
 	endif()
 
 	# transport files
-	if(CONFIG_ESP_SDIO_HOST_INTERFACE)
+	if(CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE)
 		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/sdio/sdio_drv.c")
-	elseif(CONFIG_ESP_SPI_HD_HOST_INTERFACE)
+	elseif(CONFIG_ESP_HOSTED_SPI_HD_HOST_INTERFACE)
 		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/spi_hd/spi_hd_drv.c")
-	elseif(CONFIG_ESP_SPI_HOST_INTERFACE)
+	elseif(CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE)
 		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/spi/spi_drv.c")
-	elseif(CONFIG_ESP_UART_HOST_INTERFACE)
+	elseif(CONFIG_ESP_HOSTED_UART_HOST_INTERFACE)
 		list(APPEND COMPONENT_SRCS "${host_dir}/drivers/transport/uart/uart_drv.c")
 	endif()
 
@@ -58,13 +58,13 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 
 	# transport port files
 	list(APPEND COMPONENT_SRCS "${host_dir}/port/os_wrapper.c")
-	if(CONFIG_ESP_SDIO_HOST_INTERFACE)
+	if(CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE)
 		list(APPEND COMPONENT_SRCS "${host_dir}/port/sdio_wrapper.c")
-	elseif(CONFIG_ESP_SPI_HD_HOST_INTERFACE)
+	elseif(CONFIG_ESP_HOSTED_SPI_HD_HOST_INTERFACE)
 		list(APPEND COMPONENT_SRCS "${host_dir}/port/spi_hd_wrapper.c")
-	elseif(CONFIG_ESP_SPI_HOST_INTERFACE)
+	elseif(CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE)
 		list(APPEND COMPONENT_SRCS "${host_dir}/port/spi_wrapper.c")
-	elseif(CONFIG_ESP_UART_HOST_INTERFACE)
+	elseif(CONFIG_ESP_HOSTED_UART_HOST_INTERFACE)
 		list(APPEND COMPONENT_SRCS "${host_dir}/port/uart_wrapper.c")
 	endif()
 
@@ -77,13 +77,13 @@ idf_component_register(SRCS ${COMPONENT_SRCS}
 
 idf_component_set_property(${COMPONENT_NAME} WHOLE_ARCHIVE TRUE)
 
-if(CONFIG_ESP_SDIO_HOST_INTERFACE)
+if(CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE)
 	idf_component_optional_requires(PRIVATE sdmmc)
 endif()
 
 # Required if using ESP-IDF without commit 6b6065de509b5de39e4655fd425bf96f43b365f7:
 # fix(driver_spi): fix p4 cache auto writeback during spi(dma) rx
-# if(CONFIG_IDF_TARGET_ESP32P4 AND (CONFIG_ESP_SPI_HOST_INTERFACE OR CONFIG_ESP_SPI_HD_HOST_INTERFACE))
+# if(CONFIG_IDF_TARGET_ESP32P4 AND (CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE OR CONFIG_ESP_HOSTED_SPI_HD_HOST_INTERFACE))
 # 	# used to workaround SPI transfer issue
 # 	idf_component_optional_requires(PRIVATE esp_mm)
 # endif()

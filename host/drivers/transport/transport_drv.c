@@ -462,19 +462,19 @@ static void verify_host_config_for_slave(uint8_t chip_type)
 	uint8_t exp_chip_id = 0xff;
 
 
-#if CONFIG_SLAVE_CHIPSET_ESP32
+#if CONFIG_ESP_HOSTED_SLAVE_ESP32
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32;
-#elif CONFIG_SLAVE_CHIPSET_ESP32C2
+#elif CONFIG_ESP_HOSTED_SLAVE_ESP32C2
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C2;
-#elif CONFIG_SLAVE_CHIPSET_ESP32C3
+#elif CONFIG_ESP_HOSTED_SLAVE_ESP32C3
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C3;
-#elif CONFIG_SLAVE_CHIPSET_ESP32C6
+#elif CONFIG_ESP_HOSTED_SLAVE_ESP32C6
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C6;
-#elif CONFIG_SLAVE_CHIPSET_ESP32S2
+#elif CONFIG_ESP_HOSTED_SLAVE_ESP32S2
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32S2;
-#elif CONFIG_SLAVE_CHIPSET_ESP32S3
+#elif CONFIG_ESP_HOSTED_SLAVE_ESP32S3
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32S3;
-#elif CONFIG_SLAVE_CHIPSET_ESP32C5
+#elif CONFIG_ESP_HOSTED_SLAVE_ESP32C5
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C5;
 #else
 	ESP_LOGW(TAG, "Incorrect host config for ESP slave chipset[%x]", chip_type);
@@ -563,7 +563,7 @@ int process_init_event(uint8_t *evt_buf, uint16_t len)
 	ESP_LOGD(TAG, "Init event length: %u", len);
 	if (len > 64) {
 		ESP_LOGE(TAG, "Init event length: %u", len);
-#if CONFIG_ESP_SPI_HOST_INTERFACE
+#if CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE
 		ESP_LOGE(TAG, "Seems incompatible SPI mode try changing SPI mode. Asserting for now.");
 #endif
 		assert(len < 64);
