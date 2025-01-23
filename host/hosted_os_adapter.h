@@ -56,7 +56,7 @@ typedef struct {
 /* 33 */  void*  (*_h_timer_start)(int duration, int type, void (*timeout_handler)(void *), void *arg);
 
           /* Mempool */
-#if CONFIG_USE_MEMPOOL
+#if CONFIG_ESP_HOSTED_USE_MEMPOOL
 /* 34 */  void*   (*_h_create_lock_mempool)(void);
 /* 35 */  void   (*_h_lock_mempool)(void *lock_handle);
 /* 36 */  void   (*_h_unlock_mempool)(void *lock_handle);
@@ -71,14 +71,14 @@ typedef struct {
           /* All Transports - Init */
 /* 41 */ void * (*_h_bus_init)(void);
           /* Transport - SPI */
-#ifdef CONFIG_ESP_SPI_HOST_INTERFACE
+#ifdef CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE
 /* 42 */ int (*_h_do_bus_transfer)(void *transfer_context);
 #endif
 /* 43 */ int (*_h_event_wifi_post)(int32_t event_id, void* event_data, size_t event_data_size, uint32_t ticks_to_wait);
 /* 44 */ void (*_h_printf)(int level, const char *tag, const char *format, ...);
 /* 45 */ void (*_h_hosted_init_hook)(void);
 
-#ifdef CONFIG_ESP_SDIO_HOST_INTERFACE
+#ifdef CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE
           /* Transport - SDIO */
 /* 46 */ int (*_h_sdio_card_init)(void *ctx);
 /* 47 */ int (*_h_sdio_read_reg)(uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
@@ -88,7 +88,7 @@ typedef struct {
 /* 51 */ int (*_h_sdio_wait_slave_intr)(uint32_t ticks_to_wait);
 #endif
 
-#ifdef CONFIG_ESP_SPI_HD_HOST_INTERFACE
+#ifdef CONFIG_ESP_HOSTED_SPI_HD_HOST_INTERFACE
           /* Transport - SPI HD */
 /* 51 */ int (*_h_spi_hd_read_reg)(uint32_t reg, uint32_t *data, int poll, bool lock_required);
 /* 52 */ int (*_h_spi_hd_write_reg)(uint32_t reg, uint32_t *data, bool lock_required);

@@ -33,8 +33,8 @@ static const char TAG[] = "H_SDIO_DRV";
 #define DO_COMBINED_REG_READ (1)
 
 /** Constants/Macros **/
-#define TO_SLAVE_QUEUE_SIZE               CONFIG_ESP_SDIO_TX_Q_SIZE
-#define FROM_SLAVE_QUEUE_SIZE             CONFIG_ESP_SDIO_RX_Q_SIZE
+#define TO_SLAVE_QUEUE_SIZE               H_SDIO_TX_Q
+#define FROM_SLAVE_QUEUE_SIZE             H_SDIO_RX_Q
 
 #define RX_TASK_STACK_SIZE                4096
 #define TX_TASK_STACK_SIZE                4096
@@ -422,7 +422,7 @@ static void sdio_write_task(void const* pvParameters)
 		if (!buf_handle.payload_zcopy)
 			g_h.funcs->_h_memcpy(payload, buf_handle.payload, len);
 
-#if CONFIG_ESP_SDIO_CHECKSUM
+#if H_SDIO_CHECKSUM
 		payload_header->checksum = htole16(compute_checksum(sendbuf,
 			sizeof(struct esp_payload_header) + len));
 #endif
@@ -502,7 +502,7 @@ static int is_valid_sdio_rx_packet(uint8_t *rxbuff_a, uint16_t *len_a, uint16_t 
 {
 	struct esp_payload_header * h = (struct esp_payload_header *)rxbuff_a;
 	uint16_t len = 0, offset = 0;
-#if CONFIG_ESP_SDIO_CHECKSUM
+#if H_SDIO_CHECKSUM
 	uint16_t rx_checksum = 0, checksum = 0;
 #endif
 
@@ -527,7 +527,7 @@ static int is_valid_sdio_rx_packet(uint8_t *rxbuff_a, uint16_t *len_a, uint16_t 
 
 	}
 
-#if CONFIG_ESP_SDIO_CHECKSUM
+#if H_SDIO_CHECKSUM
 	rx_checksum = le16toh(h->checksum);
 	h->checksum = 0;
 	checksum = compute_checksum((uint8_t*)h, len + offset);
