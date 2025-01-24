@@ -27,19 +27,19 @@
 #include "esp_wifi_crypto_types.h"
 #include "esp_private/wifi_os_adapter.h"
 
-#ifdef CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_SDIO
 #include "sdio_wrapper.h"
 #endif
 
-#ifdef CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_SPI
 #include "spi_wrapper.h"
 #endif
 
-#ifdef CONFIG_ESP_HOSTED_SPI_HD_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_SPI_HD
 #include "spi_hd_wrapper.h"
 #endif
 
-#ifdef CONFIG_ESP_HOSTED_UART_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_UART
 #include "uart_wrapper.h"
 #endif
 
@@ -582,7 +582,7 @@ int hosted_destroy_semaphore(void * semaphore_handle)
 	return ret;
 }
 
-#ifdef CONFIG_ESP_HOSTED_USE_MEMPOOL
+#ifdef H_USE_MEMPOOL
 static void * hosted_create_spinlock(void)
 {
 	spinlock_handle_t spin_dummy = portMUX_INITIALIZER_UNLOCKED;
@@ -812,7 +812,7 @@ hosted_osi_funcs_t g_hosted_osi_funcs = {
 	._h_destroy_semaphore        =  hosted_destroy_semaphore       ,
 	._h_timer_stop               =  hosted_timer_stop              ,
 	._h_timer_start              =  hosted_timer_start             ,
-#ifdef CONFIG_ESP_HOSTED_USE_MEMPOOL
+#ifdef H_USE_MEMPOOL
 	._h_create_lock_mempool      =  hosted_create_lock_mempool     ,
 	._h_lock_mempool             =  hosted_lock_mempool            ,
 	._h_unlock_mempool           =  hosted_unlock_mempool          ,
@@ -821,14 +821,14 @@ hosted_osi_funcs_t g_hosted_osi_funcs = {
 	._h_config_gpio_as_interrupt =  hosted_config_gpio_as_interrupt,
 	._h_read_gpio                =  hosted_read_gpio               ,
 	._h_write_gpio               =  hosted_write_gpio              ,
-#ifdef CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_SPI
 	._h_bus_init                 =  hosted_spi_init                ,
 	._h_do_bus_transfer          =  hosted_do_spi_transfer         ,
 #endif
 	._h_event_wifi_post          =  hosted_wifi_event_post         ,
 	._h_printf                   =  hosted_log_write               ,
 	._h_hosted_init_hook         =  hosted_init_hook               ,
-#ifdef CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_SDIO
 	._h_bus_init                 =  hosted_sdio_init               ,
 	._h_sdio_card_init           =  hosted_sdio_card_init          ,
 	._h_sdio_read_reg            =  hosted_sdio_read_reg           ,
@@ -837,7 +837,7 @@ hosted_osi_funcs_t g_hosted_osi_funcs = {
 	._h_sdio_write_block         =  hosted_sdio_write_block        ,
 	._h_sdio_wait_slave_intr     =  hosted_sdio_wait_slave_intr    ,
 #endif
-#ifdef CONFIG_ESP_HOSTED_SPI_HD_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_SPI_HD
 	._h_bus_init                 =  hosted_spi_hd_init               ,
 	._h_spi_hd_read_reg          =  hosted_spi_hd_read_reg           ,
 	._h_spi_hd_write_reg         =  hosted_spi_hd_write_reg          ,
@@ -846,7 +846,7 @@ hosted_osi_funcs_t g_hosted_osi_funcs = {
 	._h_spi_hd_set_data_lines    =  hosted_spi_hd_set_data_lines     ,
 	._h_spi_hd_send_cmd9         =  hosted_spi_hd_send_cmd9          ,
 #endif
-#ifdef CONFIG_ESP_HOSTED_UART_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_UART
 	._h_bus_init                 = hosted_uart_init                ,
 	._h_uart_read                = hosted_uart_read                ,
 	._h_uart_write               = hosted_uart_write               ,

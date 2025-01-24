@@ -9,7 +9,6 @@
 
 #include "sdkconfig.h"
 #include "esp_task.h"
-#include "hosted_os_adapter.h"
 #include "adapter.h"
 
 
@@ -43,6 +42,31 @@ enum {
     H_GPIO_INTR_HIGH_LEVEL = 5,  /*!< GPIO interrupt type : input high level trigger     */
     H_GPIO_INTR_MAX,
 };
+
+#if CONFIG_SLAVE_IDF_TARGET_ESP32
+#define H_SLAVE_TARGET_ESP32 1
+#elif CONFIG_SLAVE_IDF_TARGET_ESP32S2
+#define H_SLAVE_TARGET_ESP32S2 1
+#elif CONFIG_SLAVE_IDF_TARGET_ESP32C3
+#define H_SLAVE_TARGET_ESP32C3 1
+#elif CONFIG_SLAVE_IDF_TARGET_ESP32S3
+#define H_SLAVE_TARGET_ESP32S3 1
+#elif CONFIG_SLAVE_IDF_TARGET_ESP32C2
+#define H_SLAVE_TARGET_ESP32C2 1
+#elif CONFIG_SLAVE_IDF_TARGET_ESP32C6
+#define H_SLAVE_TARGET_ESP32C6 1
+#elif CONFIG_SLAVE_IDF_TARGET_ESP32C5
+#define H_SLAVE_TARGET_ESP32C5 1
+#else
+#error "Unknown Slave Target"
+#endif
+
+#if CONFIG_ESP_HOSTED_USE_MEMPOOL
+#define H_USE_MEMPOOL 1
+#endif
+
+#define H_MAX_SYNC_RPC_REQUESTS                      CONFIG_ESP_HOSTED_MAX_SIMULTANEOUS_SYNC_RPC_REQUESTS
+#define H_MAX_ASYNC_RPC_REQUESTS                     CONFIG_ESP_HOSTED_MAX_SIMULTANEOUS_ASYNC_RPC_REQUESTS
 
 #undef H_TRANSPORT_IN_USE
 
@@ -334,10 +358,15 @@ enum {
   #define H_WIFI_TX_DATA_THROTTLE_HIGH_THRESHOLD       0
 #endif
 
+#define H_PKT_STATS                                  CONFIG_ESP_HOSTED_PKT_STATS
+
 /* Raw Throughput Testing */
 #define H_TEST_RAW_TP     CONFIG_ESP_HOSTED_RAW_THROUGHPUT_TRANSPORT
 
 #if H_TEST_RAW_TP
+#define H_RAW_TP_REPORT_INTERVAL                     CONFIG_ESP_HOSTED_RAW_TP_REPORT_INTERVAL
+#define H_RAW_TP_PKT_LEN                             CONFIG_ESP_HOSTED_RAW_TP_HOST_TO_ESP_PKT_LEN
+
 #if CONFIG_ESP_HOSTED_RAW_THROUGHPUT_TX_TO_SLAVE
 #define H_TEST_RAW_TP_DIR (ESP_TEST_RAW_TP__HOST_TO_ESP)
 #elif CONFIG_ESP_HOSTED_RAW_THROUGHPUT_RX_FROM_SLAVE
@@ -347,6 +376,7 @@ enum {
 #else
 #error Test Raw TP direction not defined
 #endif
+
 #else
 #define H_TEST_RAW_TP_DIR (ESP_TEST_RAW_TP_NONE)
 #endif

@@ -59,7 +59,7 @@ static inline void h_uart_mempool_create(void)
 {
 	MEM_DUMP("h_uart_mempool_create");
 	buf_mp_g = mempool_create(MAX_UART_BUFFER_SIZE);
-#ifdef CONFIG_ESP_CACHE_MALLOC
+#ifdef H_USE_MEMPOOL
 	assert(buf_mp_g);
 #endif
 }

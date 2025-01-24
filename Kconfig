@@ -6,10 +6,39 @@ config ESP_HOSTED_ENABLED
 menu "ESP-Hosted config"
 	depends on ESP_HOSTED_ENABLED
 
+	# Co-processor selection done in Wi-Fi Remote Component
+	comment "ESP32 is Slave Target from Wi-Fi Remote Component"
+		depends on SLAVE_IDF_TARGET_ESP32
+	comment "ESP32-S2 is Slave Target from Wi-Fi Remote Component"
+		depends on SLAVE_IDF_TARGET_ESP32S2
+	comment "ESP32-S3 is Slave Target from Wi-Fi Remote Component"
+		depends on SLAVE_IDF_TARGET_ESP32S3
+	comment "ESP32-C2 is Slave Target from Wi-Fi Remote Component"
+		depends on SLAVE_IDF_TARGET_ESP32C2
+	comment "ESP32-C3 is Slave Target from Wi-Fi Remote Component"
+		depends on SLAVE_IDF_TARGET_ESP32C3
+	comment "ESP32-C6 is Slave Target from Wi-Fi Remote Component"
+		depends on SLAVE_IDF_TARGET_ESP32C6
+	comment "ESP32-C5 is Slave Target from Wi-Fi Remote Component"
+		depends on SLAVE_IDF_TARGET_ESP32C5
+	comment "ESP32-C61 is Slave Target from Wi-Fi Remote Component"
+		depends on SLAVE_IDF_TARGET_ESP32C61
+
+	# y if SDIO Transport is available, based on host and slave selection
+	config ESP_HOSTED_PRIV_SDIO_OPTION
+		bool
+		default y if (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4) && (SLAVE_IDF_TARGET_ESP32 || SLAVE_IDF_TARGET_ESP32C6)
+		default n
+
+	# y if SPI HD Transport is available, based on host and slave selection
+	config ESP_HOSTED_PRIV_SPI_HD_OPTION
+		bool
+		default n if (IDF_TARGET_ESP32 || SLAVE_IDF_TARGET_ESP32)
+		default y
+
 	choice ESP_HOSTED_HOST_INTERFACE
 		bool "Transport layer"
-		default ESP_HOSTED_SDIO_HOST_INTERFACE if IDF_TARGET_ESP32
-		default ESP_HOSTED_SDIO_HOST_INTERFACE if IDF_TARGET_ESP32P4
+		default ESP_HOSTED_SDIO_HOST_INTERFACE if ESP_HOSTED_PRIV_SDIO_OPTION
 		default ESP_HOSTED_SPI_HOST_INTERFACE
 		help
 			Bus interface to be used for communication with the host
@@ -20,14 +49,14 @@ menu "ESP-Hosted config"
 				Enable/Disable SPI Full-duplex host interface
 
 		config ESP_HOSTED_SDIO_HOST_INTERFACE
+			depends on ESP_HOSTED_PRIV_SDIO_OPTION
 			bool "SDIO"
-				depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4
 			help
 				Enable/Disable SDIO host interface
 
 		# SPI Half Duplex is not supported in ESP32
 		config ESP_HOSTED_SPI_HD_HOST_INTERFACE
-			depends on !IDF_TARGET_ESP32
+			depends on ESP_HOSTED_PRIV_SPI_HD_OPTION
 			bool "SPI Half-duplex"
 			help
 				Enable/Disable SPI Half-duplex host interface
@@ -38,65 +67,22 @@ menu "ESP-Hosted config"
 				Enable/Disable UART host interface
 	endchoice
 
-	choice ESP_HOSTED_SLAVE_USED
-		bool "Slave chip to be used"
-		default ESP_HOSTED_SLAVE_ESP32C6
-
-		config ESP_HOSTED_SLAVE_ESP32
-			depends on ESP_HOSTED_SPI_HOST_INTERFACE || ESP_HOSTED_SDIO_HOST_INTERFACE || ESP_HOSTED_UART_HOST_INTERFACE
-			bool "Slave as ESP32"
-
-		config ESP_HOSTED_SLAVE_ESP32S2
-			depends on ESP_HOSTED_SPI_HOST_INTERFACE || ESP_HOSTED_SPI_HD_HOST_INTERFACE || ESP_HOSTED_UART_HOST_INTERFACE
-			bool "Slave as ESP32-S2"
-
-		config ESP_HOSTED_SLAVE_ESP32S3
-			depends on ESP_HOSTED_SPI_HOST_INTERFACE || ESP_HOSTED_SPI_HD_HOST_INTERFACE || ESP_HOSTED_UART_HOST_INTERFACE
-			bool "Slave as ESP32-S3"
-
-		config ESP_HOSTED_SLAVE_ESP32C2
-			depends on ESP_HOSTED_SPI_HOST_INTERFACE || ESP_HOSTED_SPI_HD_HOST_INTERFACE || ESP_HOSTED_UART_HOST_INTERFACE
-			bool "Slave as ESP32-C2"
-
-		config ESP_HOSTED_SLAVE_ESP32C3
-			depends on ESP_HOSTED_SPI_HOST_INTERFACE || ESP_HOSTED_SPI_HD_HOST_INTERFACE || ESP_HOSTED_UART_HOST_INTERFACE
-			bool "Slave as ESP32-C3"
-
-		config ESP_HOSTED_SLAVE_ESP32C6
-			depends on ESP_HOSTED_SPI_HOST_INTERFACE || ESP_HOSTED_SDIO_HOST_INTERFACE || ESP_HOSTED_SPI_HD_HOST_INTERFACE || ESP_HOSTED_UART_HOST_INTERFACE
-			bool "Slave as ESP32-C6"
-
-		config ESP_HOSTED_SLAVE_ESP32C5
-			depends on ESP_HOSTED_SPI_HOST_INTERFACE || ESP_HOSTED_SPI_HD_HOST_INTERFACE || ESP_HOSTED_UART_HOST_INTERFACE
-			bool "Slave as ESP32-C5"
-	endchoice
-
 	config ESP_HOSTED_IDF_SLAVE_TARGET
 		string
-		default "esp32" if ESP_HOSTED_SLAVE_ESP32
-		default "esp32s2" if ESP_HOSTED_SLAVE_ESP32S2
-		default "esp32s3" if ESP_HOSTED_SLAVE_ESP32S3
-		default "esp32c2" if ESP_HOSTED_SLAVE_ESP32C2
-		default "esp32c3" if ESP_HOSTED_SLAVE_ESP32C3
-		default "esp32c6" if ESP_HOSTED_SLAVE_ESP32C6
-		default "esp32c5" if ESP_HOSTED_SLAVE_ESP32C5
+		default "esp32" if SLAVE_IDF_TARGET_ESP32
+		default "esp32s2" if SLAVE_IDF_TARGET_ESP32S2
+		default "esp32s3" if SLAVE_IDF_TARGET_ESP32S3
+		default "esp32c2" if SLAVE_IDF_TARGET_ESP32C2
+		default "esp32c3" if SLAVE_IDF_TARGET_ESP32C3
+		default "esp32c6" if SLAVE_IDF_TARGET_ESP32C6
+		default "esp32c5" if SLAVE_IDF_TARGET_ESP32C5
 		default "invalid"
-
-	menu "Task defaults"
-		config ESP_HOSTED_RPC_TASK_STACK
-			int "RPC task stack size"
-			default 4096
-
-		config ESP_HOSTED_DFLT_TASK_STACK
-			int "Hosted default task size"
-			default 3072
-	endmenu
 
 	menu "SPI Configuration"
 		depends on ESP_HOSTED_SPI_HOST_INTERFACE
 
 		choice ESP_HOSTED_SPI_PRIV_MODE_ESP32
-			depends on ESP_HOSTED_SLAVE_ESP32
+			depends on SLAVE_IDF_TARGET_ESP32
 			bool "Host SPI mode"
 			default ESP_HOSTED_SPI_PRIV_MODE_2_ESP32
 
@@ -114,7 +100,7 @@ menu "ESP-Hosted config"
 		endchoice
 
 		choice ESP_HOSTED_SPI_PRIV_MODE_ESP32XX
-			depends on !ESP_HOSTED_SLAVE_ESP32
+			depends on !SLAVE_IDF_TARGET_ESP32
 			bool "Host SPI mode"
 			default ESP_HOSTED_SPI_PRIV_MODE_3_ESP32XX
 
@@ -142,7 +128,7 @@ menu "ESP-Hosted config"
 			default 2 if ESP_HOSTED_SPI_PRIV_MODE_2_ESP32XX
 			default 3 if ESP_HOSTED_SPI_PRIV_MODE_3_ESP32XX
 
-		choice SPI_CONTROLLER
+		choice ESP_HOSTED_SPI_CONTROLLER
 			bool "Host SPI controller to use"
 			default ESP_HOSTED_SPI_HSPI
 
@@ -166,7 +152,7 @@ menu "ESP-Hosted config"
 
 		menu "Host SPI GPIOs Config"
 
-			choice SPI_HANDSHAKE_GPIO_CONFIG
+			choice ESP_HOSTED_SPI_HANDSHAKE_GPIO_CONFIG
 				bool "Handshake GPIO Config"
 				default ESP_HOSTED_HS_ACTIVE_HIGH
 
@@ -176,7 +162,7 @@ menu "ESP-Hosted config"
 					bool "HS: Active Low"
 			endchoice
 
-			choice SPI_DATAREADY__GPIO_CONFIG
+			choice ESP_HOSTED_SPI_DATAREADY__GPIO_CONFIG
 				bool "DataReady GPIO Config"
 				default ESP_HOSTED_DR_ACTIVE_HIGH
 
@@ -186,7 +172,7 @@ menu "ESP-Hosted config"
 					bool "DR: Active Low"
 			endchoice
 
-			choice SPI_RESET_GPIO_CONFIG
+			choice ESP_HOSTED_SPI_RESET_GPIO_CONFIG
 				bool "Reset GPIO Config"
 				default ESP_HOSTED_SPI_RESET_ACTIVE_HIGH
 				help
@@ -202,7 +188,7 @@ menu "ESP-Hosted config"
 			config ESP_HOSTED_SPI_HSPI_GPIO_MOSI
 				depends on ESP_HOSTED_SPI_HSPI
 				int "GPIO pin for Host MOSI"
-				default 14 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+				default 14 if IDF_TARGET_ESP32P4 && SLAVE_IDF_TARGET_ESP32C6
 				default 13 if IDF_TARGET_ESP32
 				default 11 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
 				default 7
@@ -212,7 +198,7 @@ menu "ESP-Hosted config"
 			config ESP_HOSTED_SPI_HSPI_GPIO_MISO
 				depends on ESP_HOSTED_SPI_HSPI
 				int "GPIO pin for Host MISO"
-				default 15 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+				default 15 if IDF_TARGET_ESP32P4 && SLAVE_IDF_TARGET_ESP32C6
 				default 12 if IDF_TARGET_ESP32
 				default 13 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
 				default 2
@@ -222,7 +208,7 @@ menu "ESP-Hosted config"
 			config ESP_HOSTED_SPI_HSPI_GPIO_CLK
 				depends on ESP_HOSTED_SPI_HSPI
 				int "GPIO pin for Host CLK"
-				default 18 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+				default 18 if IDF_TARGET_ESP32P4 && SLAVE_IDF_TARGET_ESP32C6
 				default 14 if IDF_TARGET_ESP32
 				default 12 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
 				default 6
@@ -232,7 +218,7 @@ menu "ESP-Hosted config"
 			config ESP_HOSTED_SPI_HSPI_GPIO_CS
 				depends on ESP_HOSTED_SPI_HSPI
 				int "GPIO pin for Host  CS"
-				default 19 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+				default 19 if IDF_TARGET_ESP32P4 && SLAVE_IDF_TARGET_ESP32C6
 				default 15 if IDF_TARGET_ESP32
 				default 10 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
 				default 10
@@ -289,7 +275,7 @@ menu "ESP-Hosted config"
 
 			config ESP_HOSTED_SPI_GPIO_HANDSHAKE
 				int "GPIO pin for handshake"
-				default 16 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+				default 16 if IDF_TARGET_ESP32P4 && SLAVE_IDF_TARGET_ESP32C6
 				default 3 if IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C6
 				default 17 if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S2
 				default 26
@@ -298,14 +284,14 @@ menu "ESP-Hosted config"
 
 			config ESP_HOSTED_SPI_GPIO_DATA_READY
 				int "GPIO pin for data ready interrupt"
-				default 17 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+				default 17 if IDF_TARGET_ESP32P4 && SLAVE_IDF_TARGET_ESP32C6
 				default 4
 				help
 					GPIO pin for indicating host that SPI slave has data to be read by host
 
 			config ESP_HOSTED_SPI_GPIO_RESET_SLAVE
 				int "GPIO pin for Reseting slave ESP"
-				default 54 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+				default 54 if IDF_TARGET_ESP32P4 && SLAVE_IDF_TARGET_ESP32C6
 				default 5
 				help
 					GPIO pin for Resetting ESP SPI slave device. Should be connected to RST/EN of ESP SPI slave device.
@@ -313,11 +299,11 @@ menu "ESP-Hosted config"
 
 ESP32XX_SPI_CLK_FREQ_RANGE_MIN := 1
 ESP32_SPI_CLK_FREQ_RANGE_MAX := 10
-ESP32C6_SPI_CLK_FREQ_RANGE_MAX := 26
+ESP32C6_SPI_CLK_FREQ_RANGE_MAX := 40
 ESP32XX_SPI_CLK_FREQ_RANGE_MAX := 40
 
 	config ESP_HOSTED_SPI_FREQ_ESP32
-		depends on ESP_HOSTED_SLAVE_ESP32
+		depends on SLAVE_IDF_TARGET_ESP32
 		int "SPI Clock Freq (MHz)"
 		default 10
 		range $(ESP32XX_SPI_CLK_FREQ_RANGE_MIN) $(ESP32_SPI_CLK_FREQ_RANGE_MAX)
@@ -325,27 +311,27 @@ ESP32XX_SPI_CLK_FREQ_RANGE_MAX := 40
 			"Optimize SPI CLK by increasing till host practically can support"
 
 	config ESP_HOSTED_SPI_FREQ_ESP32C6
-		depends on ESP_HOSTED_SLAVE_ESP32C6
+		depends on SLAVE_IDF_TARGET_ESP32C6
 		int "SPI Clock Freq (MHz)"
-		default 10 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+		default 40 if IDF_TARGET_ESP32P4 #config for ESP32-P4 Function_EV_Board
 		default 26
 		range $(ESP32XX_SPI_CLK_FREQ_RANGE_MIN) $(ESP32C6_SPI_CLK_FREQ_RANGE_MAX)
 		help
 			"Optimize SPI CLK by increasing till host practically can support"
 
 	config ESP_HOSTED_SPI_FREQ_ESP32XX
-		depends on ESP_HOSTED_SLAVE_ESP32C2 || ESP_HOSTED_SLAVE_ESP32C3 || ESP_HOSTED_SLAVE_ESP32S2 || ESP_HOSTED_SLAVE_ESP32S3 || ESP_HOSTED_SLAVE_ESP32C5
+		depends on SLAVE_IDF_TARGET_ESP32C2 || SLAVE_IDF_TARGET_ESP32C3 || SLAVE_IDF_TARGET_ESP32S2 || SLAVE_IDF_TARGET_ESP32S3 || SLAVE_IDF_TARGET_ESP32C5
 		int "SPI Clock Freq"
-		default 30 if ESP_HOSTED_SLAVE_ESP32C2 || ESP_HOSTED_SLAVE_ESP32C3 || ESP_HOSTED_SLAVE_ESP32S2 || ESP_HOSTED_SLAVE_ESP32S3 || ESP_HOSTED_SLAVE_ESP32C5
+		default 30 if SLAVE_IDF_TARGET_ESP32C2 || SLAVE_IDF_TARGET_ESP32C3 || SLAVE_IDF_TARGET_ESP32S2 || SLAVE_IDF_TARGET_ESP32S3 || SLAVE_IDF_TARGET_ESP32C5
 		range $(ESP32XX_SPI_CLK_FREQ_RANGE_MIN) $(ESP32XX_SPI_CLK_FREQ_RANGE_MAX)
 		help
 			"Optimize SPI CLK by increasing till host practically can support"
 
 	config ESP_HOSTED_SPI_CLK_FREQ
 		int
-		default ESP_HOSTED_SPI_FREQ_ESP32 if ESP_HOSTED_SLAVE_ESP32
-		default ESP_HOSTED_SPI_FREQ_ESP32C6 if ESP_HOSTED_SLAVE_ESP32C6
-		default ESP_HOSTED_SPI_FREQ_ESP32XX if ESP_HOSTED_SLAVE_ESP32C2 || ESP_HOSTED_SLAVE_ESP32C3 || ESP_HOSTED_SLAVE_ESP32S2 || ESP_HOSTED_SLAVE_ESP32S3 || ESP_HOSTED_SLAVE_ESP32C5
+		default ESP_HOSTED_SPI_FREQ_ESP32 if SLAVE_IDF_TARGET_ESP32
+		default ESP_HOSTED_SPI_FREQ_ESP32C6 if SLAVE_IDF_TARGET_ESP32C6
+		default ESP_HOSTED_SPI_FREQ_ESP32XX if SLAVE_IDF_TARGET_ESP32C2 || SLAVE_IDF_TARGET_ESP32C3 || SLAVE_IDF_TARGET_ESP32S2 || SLAVE_IDF_TARGET_ESP32S3 || SLAVE_IDF_TARGET_ESP32C5
 		help
 			"Optimize SPI CLK by increasing till host practically can support"
 
@@ -366,7 +352,7 @@ ESP32XX_SPI_CLK_FREQ_RANGE_MAX := 40
 		menu "Hosted SDIO Configuration"
 			depends on ESP_HOSTED_SDIO_HOST_INTERFACE
 
-			choice SDIO_RESET_GPIO_CONFIG
+			choice ESP_HOSTED_SDIO_RESET_GPIO_CONFIG
 				bool "RESET GPIO Config"
 				default ESP_HOSTED_SDIO_RESET_ACTIVE_HIGH
 				help
@@ -379,7 +365,7 @@ ESP32XX_SPI_CLK_FREQ_RANGE_MAX := 40
 					bool "RESET: Active Low"
 			endchoice
 
-			choice ESP_SDIO_RX_OPTIMIZATION
+			choice ESP_HOSTED_SDIO_RX_OPTIMIZATION
 				bool "SDIO Receive Optimization"
 				default ESP_HOSTED_SDIO_OPTIMIZATION_RX_STREAMING_MODE
 
@@ -436,7 +422,7 @@ ESP32XX_SPI_CLK_FREQ_RANGE_MAX := 40
 ESP32_SDIO_CLK_FREQ_KHZ_RANGE_MIN := 400
 ESP32_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 40000
 ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MIN := 400
-ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 80000
+ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 50000
 
 			config ESP_HOSTED_SDIO_CLOCK_FREQ_KHZ
 				int "SDIO Clock Freq (in kHz)"
@@ -444,7 +430,7 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 80000
 				range $(ESP32_SDIO_CLK_FREQ_KHZ_RANGE_MIN) $(ESP32_SDIO_CLK_FREQ_KHZ_RANGE_MAX) if IDF_TARGET_ESP32
 				range $(ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MIN) $(ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX) if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4
 				help
-					"Optimize SDIO CLK by increasing till host practically can support"
+					"Optimize SDIO CLK by increasing till host practically can support. Clock frequency for ESP32-P4 as host <= 40MHz"
 
 			config ESP_HOSTED_SDIO_PIN_CMD
 				int "CMD GPIO number"
@@ -535,7 +521,7 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 80000
 			help
 				SPI Mode to use. The same mode must be used on both host and slave.
 
-		choice ESP_SPI_HD_PRIV_INTERFACE_NUM_DATA_LINES
+		choice ESP_HOSTED_SPI_HD_PRIV_INTERFACE_NUM_DATA_LINES
 			bool "Num Data Lines to use"
 			default ESP_HOSTED_SPI_HD_PRIV_INTERFACE_4_DATA_LINES
 			help
@@ -553,7 +539,7 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 80000
 			default 4 if ESP_HOSTED_SPI_HD_PRIV_INTERFACE_4_DATA_LINES
 			default 2 if ESP_HOSTED_SPI_HD_PRIV_INTERFACE_2_DATA_LINES
 
-		choice SPI_HD_RESET_GPIO_CONFIG
+		choice ESP_HOSTED_SPI_HD_RESET_GPIO_CONFIG
 			bool "RESET GPIO Config"
 			default ESP_HOSTED_SPI_HD_RESET_ACTIVE_HIGH
 			help
@@ -566,7 +552,7 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 80000
 				bool "RESET: Active Low"
 		endchoice
 
-		choice SPI_HD_DATAREADY_GPIO_CONFIG
+		choice ESP_HOSTED_SPI_HD_DATAREADY_GPIO_CONFIG
 			bool "DataReady GPIO Config"
 			default ESP_HOSTED_SPI_HD_DR_ACTIVE_HIGH
 
@@ -638,7 +624,7 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 80000
 			config ESP_HOSTED_SPI_HD_GPIO_RESET_SLAVE
 				int "GPIO pin for Reseting slave ESP"
 				default 5 if IDF_TARGET_ESP32S3
-				default 54 if IDF_TARGET_ESP32P4 && ESP_HOSTED_SLAVE_ESP32C6
+				default 54 if IDF_TARGET_ESP32P4 && SLAVE_IDF_TARGET_ESP32C6
 				default 5
 				help
 					GPIO pin for Resetting ESP slave device. Should be connected to RST/EN of ESP SPI slave device.
@@ -650,25 +636,26 @@ ESP32C6_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 
 		config ESP_HOSTED_SPI_HD_FREQ_ESP32C6
-			depends on ESP_HOSTED_SLAVE_ESP32C6
+			depends on SLAVE_IDF_TARGET_ESP32C6
 			int "SPI HD Clock Freq (MHz)"
+			default 40 if IDF_TARGET_ESP32P4 #config for ESP32-P4 Function_EV_Board
 			default 10
 			range $(ESP32XX_SPI_HD_CLK_FREQ_RANGE_MIN) $(ESP32C6_SPI_HD_CLK_FREQ_RANGE_MAX)
 			help
 				"Optimize CLK by increasing till host practically can support"
 
 		config ESP_HOSTED_SPI_HD_FREQ_ESP32XX
-			depends on ESP_HOSTED_SLAVE_ESP32C2 || ESP_HOSTED_SLAVE_ESP32C3 || ESP_HOSTED_SLAVE_ESP32S2 || ESP_HOSTED_SLAVE_ESP32S3 || ESP_HOSTED_SLAVE_ESP32C5
+			depends on SLAVE_IDF_TARGET_ESP32C2 || SLAVE_IDF_TARGET_ESP32C3 || SLAVE_IDF_TARGET_ESP32S2 || SLAVE_IDF_TARGET_ESP32S3 || SLAVE_IDF_TARGET_ESP32C5
 			int "SPI HD Clock Freq (MHz)"
-			default 10 if ESP_HOSTED_SLAVE_ESP32C2 || ESP_HOSTED_SLAVE_ESP32C3 || ESP_HOSTED_SLAVE_ESP32S2 || ESP_HOSTED_SLAVE_ESP32S3 || ESP_HOSTED_SLAVE_ESP32C5
+			default 10 if SLAVE_IDF_TARGET_ESP32C2 || SLAVE_IDF_TARGET_ESP32C3 || SLAVE_IDF_TARGET_ESP32S2 || SLAVE_IDF_TARGET_ESP32S3 || SLAVE_IDF_TARGET_ESP32C5
 			range $(ESP32XX_SPI_HD_CLK_FREQ_RANGE_MIN) $(ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX)
 			help
 				"Optimize CLK by increasing till host practically can support"
 
 		config ESP_HOSTED_SPI_HD_CLK_FREQ
 			int
-			default ESP_HOSTED_SPI_HD_FREQ_ESP32C6 if ESP_HOSTED_SLAVE_ESP32C6
-			default ESP_HOSTED_SPI_HD_FREQ_ESP32XX if ESP_HOSTED_SLAVE_ESP32C2 || ESP_HOSTED_SLAVE_ESP32C3 || ESP_HOSTED_SLAVE_ESP32S2 || ESP_HOSTED_SLAVE_ESP32S3 || ESP_HOSTED_SLAVE_ESP32C5
+			default ESP_HOSTED_SPI_HD_FREQ_ESP32C6 if SLAVE_IDF_TARGET_ESP32C6
+			default ESP_HOSTED_SPI_HD_FREQ_ESP32XX if SLAVE_IDF_TARGET_ESP32C2 || SLAVE_IDF_TARGET_ESP32C3 || SLAVE_IDF_TARGET_ESP32S2 || SLAVE_IDF_TARGET_ESP32S3 || SLAVE_IDF_TARGET_ESP32C5
 			help
 				"Optimize CLK by increasing till host practically can support"
 
@@ -694,7 +681,7 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 	menu "UART Configuration"
 		depends on ESP_HOSTED_UART_HOST_INTERFACE
 
-		choice ESP_UART_RESET_GPIO_CONFIG
+		choice ESP_HOSTED_UART_RESET_GPIO_CONFIG
 			bool "RESET GPIO Config"
 			default ESP_HOSTED_UART_RESET_ACTIVE_HIGH
 			help
@@ -755,7 +742,7 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 			help
 				Number of Data Bits to use
 
-		choice ESP_UART_PRIV_PARITY
+		choice ESP_HOSTED_UART_PRIV_PARITY
 			bool "Parity"
 
 			config ESP_HOSTED_UART_PRIV_PARITY_NONE
@@ -774,7 +761,7 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 			default 1 if ESP_HOSTED_UART_PRIV_PARITY_EVEN
 			default 2 if ESP_HOSTED_UART_PRIV_PARITY_ODD
 
-		choice ESP_UART_PRIV_STOP_BITS
+		choice ESP_HOSTED_UART_PRIV_STOP_BITS
 			bool "Number of Stop Bits"
 
 			config ESP_HOSTED_UART_PRIV_STOP_BITS_1
@@ -856,7 +843,7 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 				help
 					Enable Bluetooth Support for Bluedroid via Hosted
 
-			choice ESP_BLUEDROID_HCI_TYPE
+			choice ESP_HOSTED_BLUEDROID_HCI_TYPE
 				bool "BT Bluedroid HCI Type"
 				default ESP_HOSTED_BLUEDROID_HCI_VHCI
 				depends on ESP_HOSTED_ENABLE_BT_BLUEDROID
@@ -877,7 +864,7 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 				help
 					Enable Bluetooth Support via Hosted
 
-			choice ESP_NIMBLE_HCI_TYPE
+			choice ESP_HOSTED_NIMBLE_HCI_TYPE
 				bool "BT Nimble HCI Type"
 				default ESP_HOSTED_NIMBLE_HCI_VHCI
 				depends on ESP_HOSTED_ENABLE_BT_NIMBLE
@@ -890,6 +877,16 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 						Bluetooth data is sent through the selected transport layer
 			endchoice
 		endif
+	endmenu
+
+	menu "Task defaults"
+		config ESP_HOSTED_RPC_TASK_STACK
+			int "RPC task stack size"
+			default 4096
+
+		config ESP_HOSTED_DFLT_TASK_STACK
+			int "Hosted default task size"
+			default 3072
 	endmenu
 
 	config ESP_HOSTED_USE_MEMPOOL
@@ -926,7 +923,7 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 				help
 					Find max transport performance which helps to assess stability of porting done
 
-		choice ESP_RAW_THROUGHPUT_DIRECTION
+		choice ESP_HOSTED_RAW_THROUGHPUT_DIRECTION
 			bool "RawTP: Send data from:"
 			depends on ESP_HOSTED_RAW_THROUGHPUT_TRANSPORT
 

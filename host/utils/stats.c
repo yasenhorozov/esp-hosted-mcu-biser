@@ -113,8 +113,8 @@ static void raw_tp_tx_task(void const* pvParameters)
 	g_h.funcs->_h_sleep(5);
 
 	buf_mp_g = mempool_create(MAX_TRANSPORT_BUFFER_SIZE);
-#ifdef CONFIG_ESP_CACHE_MALLOC
-	assert(channel->memp);
+#ifdef H_USE_MEMPOOL
+	assert(buf_mp_g);
 #endif
 
 	while (1) {
