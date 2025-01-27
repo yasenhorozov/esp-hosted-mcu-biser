@@ -29,7 +29,7 @@ static char * MEM_TAG = "mpool";
 
 struct mempool * mempool_create(uint32_t block_size)
 {
-#ifdef CONFIG_ESP_HOSTED_USE_MEMPOOL
+#ifdef H_USE_MEMPOOL
 	struct mempool * new = (struct mempool *)g_h.funcs->_h_malloc(MEMPOOL_ALIGNED(sizeof(struct mempool)));
 
 	if (!new) {
@@ -64,7 +64,7 @@ struct mempool * mempool_create(uint32_t block_size)
 
 void mempool_destroy(struct mempool* mp)
 {
-#ifdef CONFIG_ESP_HOSTED_USE_MEMPOOL
+#ifdef H_USE_MEMPOOL
 	void * node1 = NULL;
 
 	if (!mp)
@@ -87,7 +87,7 @@ void * mempool_alloc(struct mempool* mp, int nbytes, int need_memset)
 {
 	void *buf = NULL;
 
-#ifdef CONFIG_ESP_HOSTED_USE_MEMPOOL
+#ifdef H_USE_MEMPOOL
 	if (!mp || mp->block_size < nbytes)
 		return NULL;
 
@@ -134,7 +134,7 @@ void mempool_free(struct mempool* mp, void *mem)
 {
 	if (!mem)
 		return;
-#ifdef CONFIG_ESP_HOSTED_USE_MEMPOOL
+#ifdef H_USE_MEMPOOL
 	if (!mp)
 		return;
 

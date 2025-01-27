@@ -25,6 +25,7 @@
 #include "transport_drv.h"
 
 #include "spi_hd_drv.h"
+#include "esp_hosted_config.h"
 
 #include "esp_hosted_log.h"
 static const char TAG[] = "H_SPI_HD_DRV";
@@ -106,7 +107,7 @@ static inline void spi_hd_mempool_create()
 {
 	MEM_DUMP("spi_hd_mempool_create");
 	buf_mp_g = mempool_create(MAX_SPI_HD_BUFFER_SIZE);
-#ifdef CONFIG_ESP_CACHE_MALLOC
+#ifdef H_USE_MEMPOOL
 	assert(buf_mp_g);
 #endif
 }

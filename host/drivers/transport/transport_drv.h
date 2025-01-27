@@ -30,6 +30,7 @@ extern "C" {
 #endif
 //#include "netdev_if.h"
 #include "adapter.h"
+#include "esp_hosted_config.h"
 
 /* ESP in sdkconfig has CONFIG_IDF_FIRMWARE_CHIP_ID entry.
  * supported values of CONFIG_IDF_FIRMWARE_CHIP_ID are - */
@@ -43,7 +44,7 @@ extern "C" {
 #define ESP_PRIV_FIRMWARE_CHIP_ESP32C5      (0x17)
 
 
-#if CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_SPI
 #include "spi_wrapper.h"
 #define SPI_MODE0                           (0)
 #define SPI_MODE1                           (1)
