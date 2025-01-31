@@ -148,13 +148,13 @@ on both the Hosted Master and co-processor.
 
 ```mermaid
 sequenceDiagram
-    box Grey Hosted Master
+    box rgb(128, 128, 128) Hosted Master
     participant ble as NimBLE Host Bluetooth Stack
     participant vhci as VHCI Driver
     participant master as SPI/SDIO Interface
     end
 
-    box Grey Hosted Co-processor
+    box rgb(128, 128, 128) Hosted Co-processor
     participant sinterface as SPI/SDIO Interface
     participant slave as Bluetooth Controller
     end
@@ -174,13 +174,13 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Hosted Master
+    box rgb(128, 128, 128) Hosted Master
     participant ble as NimBLE Host Bluetooth Stack
     participant vhci as VHCI Driver
     participant master as SPI/SDIO Interface
     end
 
-    box Grey Hosted Co-processor
+    box rgb(128, 128, 128) Hosted Co-processor
     participant sinterface as SPI/SDIO Interface
     participant slave as Bluetooth Controller
     end
@@ -204,13 +204,13 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Hosted Master
+    box rgb(128, 128, 128) Hosted Master
     participant ble as NimBLE Host Bluetooth Stack
     participant vhci as VHCI Driver
     participant master as SPI/SDIO Interface
     end
 
-    box Grey Hosted Co-processor
+    box rgb(128, 128, 128) Hosted Co-processor
     participant sinterface as SPI/SDIO Interface
     participant slave as Bluetooth Controller
     end
@@ -244,12 +244,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Master
+    box rgb(128, 128, 128) Master
     participant ble as NimBLE Host Bluetooth Stack
     participant huart as UART Driver
     end
 
-    box Grey Co-processor
+    box rgb(128, 128, 128) Co-processor
     participant slave as Bluetooth Controller with UART Interface
     end
 
@@ -268,12 +268,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Master
+    box rgb(128, 128, 128) Master
     participant ble as NimBLE Host Bluetooth Stack
     participant huart as UART Driver
     end
 
-    box Grey Co-processor
+    box rgb(128, 128, 128) Co-processor
     participant slave as Bluetooth Controller with UART Interface
     end
 
@@ -290,12 +290,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Master
+    box rgb(128, 128, 128) Master
     participant ble as NimBLE Host Bluetooth Stack
     participant huart as UART Driver
     end
 
-    box Grey Co-processor
+    box rgb(128, 128, 128) Co-processor
     participant slave as Bluetooth Controller with UART Interface
     end
 
@@ -342,13 +342,13 @@ on both the Hosted Master and Co-processor.
 
 ```mermaid
 sequenceDiagram
-    box Grey Hosted Master
+    box rgb(128, 128, 128) Hosted Master
     participant bt as Host Application
     participant vhci as VHCI Driver
     participant master as SPI/SDIO Interface
     end
 
-    box Grey Hosted Co-processor
+    box rgb(128, 128, 128) Hosted Co-processor
     participant sinterface as SPI/SDIO Interface
     participant slave as Bluetooth Controller
     end
@@ -364,13 +364,13 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Hosted Master
+    box rgb(128, 128, 128) Hosted Master
     participant bt as BlueDroid Host Bluetooth Stack
     participant vhci as VHCI Driver
     participant master as SPI/SDIO Interface
     end
 
-    box Grey Hosted Co-processor
+    box rgb(128, 128, 128) Hosted Co-processor
     participant sinterface as SPI/SDIO Interface
     participant slave as Bluetooth Controller
     end
@@ -394,13 +394,13 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Hosted Master
+    box rgb(128, 128, 128) Hosted Master
     participant bt as BlueDroid Host Bluetooth Stack
     participant vhci as VHCI Driver
     participant master as SPI/SDIO Interface
     end
 
-    box Grey Hosted Co-processor
+    box rgb(128, 128, 128) Hosted Co-processor
     participant sinterface as SPI/SDIO Interface
     participant slave as Bluetooth Controller
     end
@@ -438,12 +438,12 @@ that do the following are required:
 
 ```mermaid
 sequenceDiagram
-    box Grey Master
+    box rgb(128, 128, 128) Master
     participant bt as Host Application
     participant huart as UART Driver
     end
 
-    box Grey Co-processor
+    box rgb(128, 128, 128) Co-processor
     participant slave as Bluetooth Controller with UART Interface
     end
 
@@ -458,12 +458,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Master
+    box rgb(128, 128, 128) Master
     participant bt as BlueDroid Host Bluetooth Stack
     participant huart as UART Driver
     end
 
-    box Grey Co-processor
+    box rgb(128, 128, 128) Co-processor
     participant slave as Bluetooth Controller with UART Interface
     end
 
@@ -479,12 +479,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    box Grey Master
+    box rgb(128, 128, 128) Master
     participant bt as BlueDroid Host Bluetooth Stack
     participant huart as UART Driver
     end
 
-    box Grey Co-processor
+    box rgb(128, 128, 128) Co-processor
     participant slave as Bluetooth Controller with UART Interface
     end
 
