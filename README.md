@@ -176,7 +176,7 @@ Legends:
 
 With jumper cables, 'Standard SPI' and 'Dual SPI' solutions are easiest to evaluate, without much of hardware dependencies. SDIO 1-Bit can be tested with jumper cables, but it needs some additional hardware config, such as installation of external pull-up registers.
 
-In case case of dedicated platforms, Blutooth uses standard HCI over UART. In rest of cases, Bluetooth and Wi-Fi uses same transport and hence less GPIOs and less complicated. In shared mode, bluetooth runs as vHCI (multiplexed mode)
+In case case of dedicated platforms, Blutooth uses standard HCI over UART. In rest of cases, Bluetooth and Wi-Fi uses same transport and hence less GPIOs and less complicated. In shared mode, bluetooth runs as Hosted HCI (multiplexed mode)
 
 ## 7 ESP-Hosted-MCU Header
 
@@ -208,7 +208,7 @@ Start of header states which type of frame is being carried.
 | ESP\_STA\_IF           | 1     | Station frame                                    |
 | ESP\_AP\_IF            | 2     | SoftAP frame                                     |
 | ESP\_SERIAL\_IF        | 3     | Control frame                                    |
-| ESP\_HCI\_IF           | 4     | Bluetooth vHCI frame                            |
+| ESP\_HCI\_IF           | 4     | Bluetooth Hosted HCI frame                       |
 | ESP\_PRIV\_IF          | 5     | Private communication between slave and host     |
 | ESP\_TEST\_IF          | 6     | Transport throughput test                        |
 | ESP\_ETH\_IF           | 7     | Invalid                                          |

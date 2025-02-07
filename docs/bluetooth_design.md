@@ -7,24 +7,25 @@
 - [2. Bluetooth Controller](#2-bluetooth-controller)
 - [3. Bluetooth Interface](#3-bluetooth-interface)
 - [4. NimBLE Host Stack](#4-nimble-host-stack)
-  - [4.1. Transporting HCI data using vHCI in NimBLE](#41-transporting-hci-data-using-vhci-in-nimble)
-    - [4.1.1. Bluetooth Host vHCI Initialization](#411-bluetooth-host-vhci-initialization)
-    - [4.1.2. Bluetooth Host Sending Data through vHCI in NimBLE](#412-bluetooth-host-sending-data-through-vhci-in-nimble)
-    - [4.1.3. Bluetooth Host Receiving Data from vHCI in NimBLE](#413-bluetooth-host-receiving-data-from-vhci-in-nimble)
+  - [4.1. Transporting HCI data using Hosted HCI in NimBLE](#41-transporting-hci-data-using-hosted-hci-in-nimble)
+    - [4.1.1. Bluetooth Host Hosted HCI Initialization](#411-bluetooth-host-hosted-hci-initialization)
+    - [4.1.2. Bluetooth Host Sending Data through Hosted HCI in NimBLE](#412-bluetooth-host-sending-data-through-hosted-hci-in-nimble)
+    - [4.1.3. Bluetooth Host Receiving Data from Hosted HCI in NimBLE](#413-bluetooth-host-receiving-data-from-hosted-hci-in-nimble)
   - [4.2. Transporting HCI data using UART](#42-transporting-hci-data-using-uart)
     - [4.2.1. Bluetooth Host HCI Initialization](#421-bluetooth-host-hci-initialization)
     - [4.2.2. Bluetooth Host Sending Data using HCI](#422-bluetooth-host-sending-data-using-hci)
     - [4.2.3. Bluetooth Host Receiving Data using HCI](#423-bluetooth-host-receiving-data-using-hci)
 - [5. BlueDroid Host Stack](#5-bluedroid-host-stack)
-  - [5.1. Transporting HCI data using vHCI in BlueDroid](#51-transporting-hci-data-using-vhci-in-bluedroid)
-    - [5.1.1. Bluetooth Host vHCI Initialization](#511-bluetooth-host-vhci-initialization)
-    - [5.1.2. Bluetooth Host Sending Data through vHCI in BlueDroid](#512-bluetooth-host-sending-data-through-vhci-in-bluedroid)
-    - [5.1.3. Bluetooth Host Receiving Data from vHCI in BlueDroid](#513-bluetooth-host-receiving-data-from-vhci-in-bluedroid)
+  - [5.1. Transporting HCI data using Hosted HCI in BlueDroid](#51-transporting-hci-data-using-hosted-hci-in-bluedroid)
+    - [5.1.1. Bluetooth Host Hosted HCI Initialization](#511-bluetooth-host-hosted-hci-initialization)
+    - [5.1.2. Bluetooth Host Sending Data through Hosted HCI in BlueDroid](#512-bluetooth-host-sending-data-through-hosted-hci-in-bluedroid)
+    - [5.1.3. Bluetooth Host Receiving Data from Hosted HCI in BlueDroid](#513-bluetooth-host-receiving-data-from-hosted-hci-in-bluedroid)
   - [5.2. Transporting HCI data using UART](#52-transporting-hci-data-using-uart)
     - [5.2.1. Bluetooth Host HCI Initialization](#521-bluetooth-host-hci-initialization)
     - [5.2.2. Bluetooth Host Sending Data using HCI](#522-bluetooth-host-sending-data-using-hci)
     - [5.2.3. Bluetooth Host Receiving Data using HCI](#523-bluetooth-host-receiving-data-using-hci)
-- [6. References](#6-references)
+- [6. Configuring the Co-processor for Standard HCI over UART](#6-configuring-the-co-processor-for-standard-hci-over-uart)
+- [7. References](#7-references)
 
 ## 1. Introduction
 
@@ -38,8 +39,8 @@ hardware.
 > Check that the memory requirement for your preferred Bluetooth host
 > stack can be satisfied on the Host.
 
-ESP-Hosted has is Bluetooth stack agnostic. To showcase ESP-Hosted's
-Bluetooth support, Both `esp-nimble` and `esp-bluedroid` are used
+ESP-Hosted is Bluetooth stack agnostic. To showcase ESP-Hosted's
+Bluetooth support, both `esp-nimble` and `esp-bluedroid` are used
 here. Users can use their own preferred Bluetooth stack with some
 porting effort.
 
@@ -64,32 +65,50 @@ runtime memory, making it suitable for such scenarios.
 
 ## 2. Bluetooth Controller
 
-ESP-Hosted uses the Bluetooth controller running on the
-co-processor. The co-processor is expected to be configured to use
-ESP-Hosted as the transport.
+ESP-Hosted uses the Bluetooth controller running on the co-processor.
 
-As ESP-Hosted is just the communication medium, it isn't limited to
-BLE only. Classic BT stacks are also supported, if the co-processor
-has a Classic-BT controller. The Classic-BT or BLE or both
-availability depends upon the Bluetooth stack support and ESP chipset
-chosen. As of today, ESP32 supports Classic-BT+BLE, whereas, the other
-ESP chipsets support BLE only.
+As ESP-Hosted is just the communication medium, it supports both
+Classic BT and BLE controllers. The controller available depends upon
+the ESP chipset chosen. As of today, ESP32 supports Classic-BT+BLE,
+whereas, the other ESP chipsets support BLE only.
 
 ## 3. Bluetooth Interface
 
-Hosted provides two ways to let the Bluetooth Host stack running on
-the Host to communicate with the Bluetooth controller on the
-co-processor.
+Hosted provides two ways to let the Bluetooth stack running on the
+Host to communicate with the Bluetooth controller on the co-processor:
+Standard HCI and Hosted HCI.
 
-**vHCI**
+**Standard HCI**
 
-vHCI works in shared mode. Bluetooth traffic is multiplexed with other
-traffic types on same bus, each with different Interface types. See
-the [traffic types](../README.md#72-interface-types) support
-by ESP-Hosted message headers.
+Standard HCI works in dedicated mode. Bluetooth traffic cannot be
+multiplexed with other traffic, so a dedicated transport is
+needed. Bluetooth HCI frames are transferred over the dedicated
+transport.
 
-- vHCI is standard HCI with extra headers or metadata added
-- vHCI embeds the ESP-Hosted header and re-uses the underlying
+- standard HCI is a transparent way of handling HCI messages
+- HCI messages originating from the Bluetooth stack on the Host are
+  sent through an interface (like UART) directly to the Bluetooth
+  controller on the co-processor.
+- requires extra GPIOs for the standard HCI interface, independent of
+  the GPIOs used for the ESP-Hosted interface
+
+Use this option if you want:
+
+- transparency: no extra data added to the HCI messages
+- portability: because it is standard HCI, you can replace the
+  co-processor with any other co-processor (ESP or otherwise) that has
+  a Bluetooth controller
+
+**Hosted HCI**
+
+Hosted HCI is Standard HCI encapsulated for transport over
+ESP-Hosted. Bluetooth traffic is multiplexed with other traffic types
+on the same transport, each with different Interface types. See the [traffic
+types](../README.md#72-interface-types) support by ESP-Hosted message
+headers.
+
+- Hosted HCI is standard HCI with extra headers or metadata added
+- Hosted HCI embeds the ESP-Hosted header and re-uses the underlying
   ESP-Hosted transport, such as SPI/SDIO
 - this option is easier to set up. Once the existing ESP-Hosted
   Transport (SPI or SDIO, for example) has been set up, Bluetooth
@@ -101,30 +120,9 @@ Use this option if you want:
 - extra flexibility of debugging
 - no extra GPIOs (required for Standard HCI)
 
-**Standard HCI**
-
-Standard HCI works in dedicated mode. Bluetooth traffic cannot be
-multiplexed with other traffic, so a dedicated transport is
-needed. Bluetooth HCI frames (without any hosted header) are
-transferred over the dedicated transport.
-
-- standard HCI is a transparent way of handling HCI messages
-- HCI messages originating from the Bluetooth stack on the Host are
-  sent through an interface (like UART) directly to the Bluetooth
-  controller on the co-processor.
-- requires extra GPIO for the HCI interface, independent of the GPIOs
-  used for the ESP-Hosted interface
-
-Use this option if you want:
-
-- transparency: no extra data added to the HCI messages
-- portability: because it is standard HCI, you can replace the
-  co-processor with any other co-processor (ESP or otherwise) that has
-  a Bluetooth controller
-
 > [!NOTE]
-> If Hosted is configured as the Bluetooth transport (vHCI), then your
-> Bluetooth over HCI configuration must be disabled, and vice
+> If Hosted HCI is configured as the Bluetooth transport, then your
+> Bluetooth over Standard HCI configuration must be disabled, and vice
 > versa.
 
 ## 4. NimBLE Host Stack
@@ -142,15 +140,15 @@ NimBLE Bluetooth stack to initialize, send and receive Bluetooth data:
 The following sequence diagrams show how to send and receive Bluetooth
 on both the Hosted Master and co-processor.
 
-### 4.1. Transporting HCI data using vHCI in NimBLE
+### 4.1. Transporting HCI data using Hosted HCI in NimBLE
 
-#### 4.1.1. Bluetooth Host vHCI Initialization
+#### 4.1.1. Bluetooth Host Hosted HCI Initialization
 
 ```mermaid
 sequenceDiagram
     box rgb(128, 128, 128) Hosted Master
     participant ble as NimBLE Host Bluetooth Stack
-    participant vhci as VHCI Driver
+    participant hhci as Hosted HCI Driver
     participant master as SPI/SDIO Interface
     end
 
@@ -159,24 +157,24 @@ sequenceDiagram
     participant slave as Bluetooth Controller
     end
 
-    ble ->> +vhci : hci_drv_init()
-	Note over vhci: do any init required
-    vhci -->> -ble : 
+    ble ->> +hhci : hci_drv_init()
+	Note over hhci: do any init required
+    hhci -->> -ble : 
 
-    ble ->> +vhci : ble_transport_ll_init()
-	Note over vhci : do any transport init required
-    vhci -->> -ble : 
+    ble ->> +hhci : ble_transport_ll_init()
+	Note over hhci : do any transport init required
+    hhci -->> -ble : 
 ```
 
 **Bluetooth Host Initialization**
 
-#### 4.1.2. Bluetooth Host Sending Data through vHCI in NimBLE
+#### 4.1.2. Bluetooth Host Sending Data through Hosted HCI in NimBLE
 
 ```mermaid
 sequenceDiagram
     box rgb(128, 128, 128) Hosted Master
     participant ble as NimBLE Host Bluetooth Stack
-    participant vhci as VHCI Driver
+    participant hhci as Hosted HCI Driver
     participant master as SPI/SDIO Interface
     end
 
@@ -185,14 +183,14 @@ sequenceDiagram
     participant slave as Bluetooth Controller
     end
 
-    ble ->> +vhci : ble_transport_to_ll_acl_impl()
-    Note over vhci : convert ACL data to HCI
-    vhci ->> +master : esp_hosted_tx()
+    ble ->> +hhci : ble_transport_to_ll_acl_impl()
+    Note over hhci : convert ACL data to HCI
+    hhci ->> +master : esp_hosted_tx()
     Note over master : add Hosted header
     master ->> +sinterface: SPI/SDIO
-    Note over master,sinterface : (VHCI data)
-    master -->> -vhci :  
-    vhci -->> -ble : 
+    Note over master,sinterface : (Hosted HCI data)
+    master -->> -hhci : 
+    hhci -->> -ble : 
 
     Note over sinterface : remove Hosted header
     sinterface ->> -slave : HCI data
@@ -200,13 +198,13 @@ sequenceDiagram
 
 **Bluetooth Host Sending Data**
 
-#### 4.1.3. Bluetooth Host Receiving Data from vHCI in NimBLE
+#### 4.1.3. Bluetooth Host Receiving Data from Hosted HCI in NimBLE
 
 ```mermaid
 sequenceDiagram
     box rgb(128, 128, 128) Hosted Master
     participant ble as NimBLE Host Bluetooth Stack
-    participant vhci as VHCI Driver
+    participant hhci as Hosted HCI Driver
     participant master as SPI/SDIO Interface
     end
 
@@ -218,22 +216,22 @@ sequenceDiagram
     slave ->> +sinterface : HCI data
     Note over sinterface : Add Hosted header
     sinterface ->> -master : SPI/SDIO
-    Note over sinterface,master : (VHCI data)
+    Note over sinterface,master : (Hosted HCI data)
     Note over master : Remove Hosted header
 
-    master ->> +vhci : hci_rx_handler()
+    master ->> +hhci : hci_rx_handler()
 
     alt Receive Event Data
-        Note over vhci: convert HCI data to Event
-	    vhci ->> ble : ble_transport_to_hs_evt()
-	    ble -->> vhci : 
+        Note over hhci: convert HCI data to Event
+	    hhci ->> ble : ble_transport_to_hs_evt()
+	    ble -->> hhci : 
     else Receive ACL Data
-        Note over vhci: convert HCI data to ACL
-	    vhci ->> ble : ble_transport_to_hs_acl()
-	    ble -->> vhci : 
+        Note over hhci: convert HCI data to ACL
+	    hhci ->> ble : ble_transport_to_hs_acl()
+	    ble -->> hhci : 
     end
 
-    vhci -->> -master : 
+    hhci -->> -master : 
 ```
 
 **Bluetooth Host Receiving Data**
@@ -317,9 +315,8 @@ sequenceDiagram
 
 ## 5. BlueDroid Host Stack
 
-The ESP-Hosted Master implements the set of API calls required by the
-BlueDroid Bluetooth stack to initialise, send and receive Bluetooth
-data.
+ESP-Hosted implements the set of API calls required by the BlueDroid
+Bluetooth stack to initialise, send and receive Bluetooth data.
 
 - `hosted_hci_bluedroid_open`
 - `hosted_hci_bluedroid_close`
@@ -331,20 +328,22 @@ data.
 attaching the transport APIs to BlueDroid and starting BlueDroid. This
 initializes the underlying transport.
 
-`hosted_hci_bluedroid_register_host_callback` records the callback provided by BlueDroid that is use to notify the Bluetooth stack of incoming HCI data (as `notify_host_recv`).
+`hosted_hci_bluedroid_register_host_callback` records the callback
+provided by BlueDroid that is use to notify the Bluetooth stack of
+incoming HCI data (as `notify_host_recv`).
 
 The following sequence diagrams show how to send and receive Bluetooth
 on both the Hosted Master and Co-processor.
 
-### 5.1. Transporting HCI data using vHCI in BlueDroid
+### 5.1. Transporting HCI data using Hosted HCI in BlueDroid
 
-#### 5.1.1. Bluetooth Host vHCI Initialization
+#### 5.1.1. Bluetooth Host Hosted HCI Initialization
 
 ```mermaid
 sequenceDiagram
     box rgb(128, 128, 128) Hosted Master
     participant bt as Host Application
-    participant vhci as VHCI Driver
+    participant hhci as Hosted HCI Driver
     participant master as SPI/SDIO Interface
     end
 
@@ -353,20 +352,20 @@ sequenceDiagram
     participant slave as Bluetooth Controller
     end
 
-    bt ->> +vhci : hosted_hci_bluedroid_open()
-	Note over vhci: do any init required
-    vhci -->> -bt : 
+    bt ->> +hhci : hosted_hci_bluedroid_open()
+	Note over hhci: do any init required
+    hhci -->> -bt : 
 ```
 
 **Bluetooth Host Initialization**
 
-#### 5.1.2. Bluetooth Host Sending Data through vHCI in BlueDroid
+#### 5.1.2. Bluetooth Host Sending Data through Hosted HCI in BlueDroid
 
 ```mermaid
 sequenceDiagram
     box rgb(128, 128, 128) Hosted Master
     participant bt as BlueDroid Host Bluetooth Stack
-    participant vhci as VHCI Driver
+    participant hhci as Hosted HCI Driver
     participant master as SPI/SDIO Interface
     end
 
@@ -375,14 +374,14 @@ sequenceDiagram
     participant slave as Bluetooth Controller
     end
 
-    bt ->> +vhci : hosted_hci_bluedroid_send()
-    Note over vhci : HCI data
-    vhci ->> +master : esp_hosted_tx()
+    bt ->> +hhci : hosted_hci_bluedroid_send()
+    Note over hhci : HCI data
+    hhci ->> +master : esp_hosted_tx()
     Note over master : add Hosted header
     master ->> +sinterface: SPI/SDIO
-    Note over master,sinterface : (VHCI data)
-    master -->> -vhci :  
-    vhci -->> -bt : 
+    Note over master,sinterface : (Hosted HCI data)
+    master -->> -hhci : 
+    hhci -->> -bt : 
 
     Note over sinterface : remove Hosted header
     sinterface ->> -slave : HCI data
@@ -390,13 +389,13 @@ sequenceDiagram
 
 **Bluetooth Host Sending Data**
 
-#### 5.1.3. Bluetooth Host Receiving Data from vHCI in BlueDroid
+#### 5.1.3. Bluetooth Host Receiving Data from Hosted HCI in BlueDroid
 
 ```mermaid
 sequenceDiagram
     box rgb(128, 128, 128) Hosted Master
     participant bt as BlueDroid Host Bluetooth Stack
-    participant vhci as VHCI Driver
+    participant hhci as Hosted HCI Driver
     participant master as SPI/SDIO Interface
     end
 
@@ -408,15 +407,15 @@ sequenceDiagram
     slave ->> +sinterface : HCI data
     Note over sinterface : Add Hosted header
     sinterface ->> -master : SPI/SDIO
-    Note over sinterface,master : (VHCI data)
+    Note over sinterface,master : (Hosted HCI data)
     Note over master : Remove Hosted header
 
-    master ->> +vhci : hci_rx_handler()
+    master ->> +hhci : hci_rx_handler()
 
-    vhci ->> bt : notify_host_recv()
-    Note over vhci, bt: HCI data
+    hhci ->> bt : notify_host_recv()
+    Note over hhci, bt: HCI data
 
-    vhci -->> -master : 
+    hhci -->> -master : 
 ```
 
 **Bluetooth Host Receiving Data**
@@ -468,7 +467,7 @@ sequenceDiagram
     end
 
     bt ->> huart : uart_tx()
-    huart ->> slave : UART TX 
+    huart ->> slave : UART TX
     Note over huart,slave : (standard HCI)
     huart -->> bt : 
 ```
@@ -498,7 +497,24 @@ sequenceDiagram
 
 **Bluetooth Host Receiving Data**
 
-## 6. References
+## 6. Configuring the Co-processor for Standard HCI over UART
+
+Standard HCI over UART setup is done through the Bluetooth Component
+kconfig settings. In menuconfig, select `Component config` ->
+`Bluetooth` -> `Controller Options` -> `HCI mode` or `HCI Config` and
+set it to `UART(H4)`.
+
+Depending on the selected co-processor, you can configure various UART
+parameters (Tx, Rx pins, hardware flow control, RTS, CTS pins,
+baudrate) through the Bluetooth Component. Other UART parameters not
+handled by the Bluetooth Component are configured by ESP-Hosted
+through `Example Configuration` -> `HCI UART Settings`.
+
+> [!NOTE]
+> Make sure the Standard HCI UART GPIO pins selected do not conflict
+> with the GPIO pins used for the selected ESP-Hosted transport.
+
+## 7. References
 
 - esp-nimble: https://github.com/espressif/esp-nimble
 - ESP-IDF NimBLE-based Host APIs: https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/bluetooth/nimble/index.html

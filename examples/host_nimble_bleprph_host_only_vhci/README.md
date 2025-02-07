@@ -1,14 +1,14 @@
 | Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-H2 | ESP32-S3 | ESP32-P4 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
 
-# BLE Host-Only Peripheral VHCI Example
+# BLE Host-Only Peripheral Hosted HCI Example
 
-This example uses the Bluetooth VHCI transport provided by ESP-Hosted.
+This example uses the Bluetooth Hosted HCI transport provided by ESP-Hosted.
 
-To use the VHCI transport in the application, the Bluetooth controller
-should be disabled and the default uart-transport should also be
-disabled (when the controller is disabled, by default the
-uart-transport is selected). The Bluetooth VHCI transport in
+To use the Hosted HCI transport in the application, the Bluetooth
+controller should be disabled and the default uart-transport should
+also be disabled (when the controller is disabled, by default the
+uart-transport is selected). The Bluetooth Hosted HCI transport in
 ESP-Hosted should also be enabled.
 
 Refer to the `sdkconfig.defaults` file which has the required
