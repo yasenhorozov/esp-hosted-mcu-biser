@@ -81,9 +81,11 @@ int compose_rpc_req(Rpc *req, ctrl_cmd_t *app_req, int32_t *failure_status)
 	case RPC_ID__Req_WifiGetCountry:
 	case RPC_ID__Req_WifiApGetStaList:
 	case RPC_ID__Req_WifiStaGetRssi:
+	case RPC_ID__Req_WifiStaGetNegotiatedPhymode:
 	case RPC_ID__Req_WifiStaGetAid:
 	case RPC_ID__Req_WifiGetBand:
-	case RPC_ID__Req_WifiGetBandMode: {
+	case RPC_ID__Req_WifiGetBandMode:
+	case RPC_ID__Req_WifiScanGetApRecord: {
 		/* Intentional fallthrough & empty */
 		break;
 	} case RPC_ID__Req_GetMACAddress: {

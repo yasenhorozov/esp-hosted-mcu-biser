@@ -54,10 +54,12 @@ enum {
 	WIFI_SCAN_AP_REC_wps_BIT           = 5,
 	WIFI_SCAN_AP_REC_ftm_responder_BIT = 6,
 	WIFI_SCAN_AP_REC_ftm_initiator_BIT = 7,
-	WIFI_SCAN_AP_REC_MAX_USED_BIT      = 8,
+	WIFI_SCAN_AP_REC_phy_11a_BIT       = 8,
+	WIFI_SCAN_AP_REC_phy_11ac_BIT      = 9,
+	WIFI_SCAN_AP_REC_MAX_USED_BIT      = 10,
 };
 
-#define WIFI_SCAN_AP_RESERVED_BITMASK             0xFF00
+#define WIFI_SCAN_AP_RESERVED_BITMASK             0xFC00
 
 #define WIFI_SCAN_AP_GET_RESERVED_VAL(num)                                      \
     ((num&WIFI_SCAN_AP_RESERVED_BITMASK)>>WIFI_SCAN_AP_REC_MAX_USED_BIT)

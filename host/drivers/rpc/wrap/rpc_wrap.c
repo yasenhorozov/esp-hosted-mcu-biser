@@ -278,7 +278,7 @@ static int process_failed_responses(ctrl_cmd_t *app_msg)
 			ESP_LOGE(TAG, "OTA procedure failed");
 			break;
 		} default: {
-			ESP_LOGE(TAG, "Failed Control Response");
+			ESP_LOGD(TAG, "Got Hosted Control Response with resp code %d", result);
 			break;
 		}
 	}
@@ -435,6 +435,7 @@ int rpc_rsp_callback(ctrl_cmd_t * app_resp)
 		}
 		break;
 	}
+	case RPC_ID__Resp_WifiScanGetApRecord:
 	case RPC_ID__Resp_WifiInit:
 	case RPC_ID__Resp_WifiDeinit:
 	case RPC_ID__Resp_WifiStart:
@@ -464,6 +465,7 @@ int rpc_rsp_callback(ctrl_cmd_t * app_resp)
 	case RPC_ID__Resp_WifiStaGetRssi:
 	case RPC_ID__Resp_WifiSetProtocol:
 	case RPC_ID__Resp_WifiGetProtocol:
+	case RPC_ID__Resp_WifiStaGetNegotiatedPhymode:
 	case RPC_ID__Resp_WifiStaGetAid:
 	case RPC_ID__Resp_WifiSetProtocols:
 	case RPC_ID__Resp_WifiGetProtocols:
@@ -1100,6 +1102,19 @@ int rpc_wifi_get_max_tx_power(int8_t *power)
 	return rpc_rsp_callback(resp);
 }
 
+esp_err_t rpc_wifi_sta_get_negotiated_phymode(wifi_phy_mode_t *phymode)
+{
+	/* implemented synchronous */
+	ctrl_cmd_t *req = RPC_DEFAULT_REQ();
+	ctrl_cmd_t *resp = NULL;
+
+	resp = wifi_sta_get_negotiated_phymode(req);
+	if (resp && resp->resp_event_status == SUCCESS) {
+		*phymode = resp->u.wifi_sta_get_negotiated_phymode.phymode;
+	}
+	return rpc_rsp_callback(resp);
+}
+
 esp_err_t rpc_wifi_sta_get_aid(uint16_t *aid)
 {
 	/* implemented synchronous */
@@ -1432,6 +1447,22 @@ int rpc_wifi_scan_get_ap_num(uint16_t *number)
 
 	if (resp && resp->resp_event_status == SUCCESS) {
 		*number = resp->u.wifi_scan_ap_list.number;
+	}
+	return rpc_rsp_callback(resp);
+}
+
+int rpc_wifi_scan_get_ap_record(wifi_ap_record_t *ap_record)
+{
+	/* implemented synchronous */
+	ctrl_cmd_t *req = RPC_DEFAULT_REQ();
+	ctrl_cmd_t *resp = NULL;
+
+	if (!ap_record)
+		return FAILURE;
+
+	resp = wifi_scan_get_ap_record(req);
+	if (resp && resp->resp_event_status == SUCCESS) {
+		g_h.funcs->_h_memcpy(ap_record, &resp->u.wifi_ap_record, sizeof(wifi_ap_record_t));
 	}
 	return rpc_rsp_callback(resp);
 }
