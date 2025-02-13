@@ -29,7 +29,7 @@ DEFINE_LOG_TAG(rpc_rsp);
 #define RPC_ERR_IN_RESP(msGparaM)                                             \
     if (rpc_msg->msGparaM->resp) {                                            \
         app_resp->resp_event_status = rpc_msg->msGparaM->resp;                \
-        ESP_LOGW(TAG, "Hosted RPC_Resp [0x%x], uid [%ld], resp code [%d]",    \
+        ESP_LOGW(TAG, "Hosted RPC_Resp [0x%"PRIx16"], uid [%"PRIu32"], resp code [%"PRIi32"]", \
                 app_resp->msg_id, app_resp->uid, app_resp->resp_event_status); \
         goto fail_parse_rpc_msg;                                              \
     }
