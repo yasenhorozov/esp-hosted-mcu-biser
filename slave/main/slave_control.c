@@ -143,6 +143,19 @@
     InIt_FuN(MsG_StRuCt);                                                     \
 }
 
+#define NTFY_COPY_BYTES(dest, src, num)                                         \
+  do {                                                                          \
+    if (num) {                                                                  \
+      dest.data = (uint8_t *)calloc(1, num);                                    \
+      if (!dest.data) {                                                         \
+        ESP_LOGE(TAG, "%s:%u Failed to duplicate bytes\n",__func__,__LINE__);   \
+        ntfy_payload->resp = FAILURE;                                           \
+        return ESP_OK;                                                          \
+      }                                                                         \
+      memcpy(dest.data, src, num);                                              \
+	  dest.len = num;                                                           \
+    }                                                                           \
+  } while(0)
 
 #define RPC_REQ_COPY_BYTES(dest, src, num_bytes)                               \
   if (src.len && src.data)                                                      \
@@ -2094,290 +2107,30 @@ static esp_err_t esp_rpc_command_dispatcher(
 	return ESP_OK;
 }
 
-// frees ap record in rpc response
-static void free_ap_record_content(WifiApRecord *record)
-{
-	mem_free(record->ssid.data);
-	mem_free(record->bssid.data);
-	mem_free(record->country->cc.data);
-	mem_free(record->country);
-	mem_free(record->he_ap);
-}
-
-/* TODO: Is this really required? Can't just rpc__free_unpacked(resp, NULL); would do? */
+/* use rpc__free_unpacked to free memory
+ * For RPC structure to be freed correctly with no memory leaks:
+ * - n_xxx must be set to number of 'repeated xxx' structures in RPC msg
+ * - xxx_case must be set for 'oneof xxx' structures in RPC msg
+ * - xxx.len must be set for 'bytes xxx' or 'string xxx' in RPC msg
+ */
 static void esp_rpc_cleanup(Rpc *resp)
 {
-	if (!resp) {
-		return;
-	}
-
-	switch (resp->msg_id) {
-		case (RPC_ID__Resp_GetMACAddress ) : {
-			mem_free(resp->resp_get_mac_address->mac.data);
-			mem_free(resp->resp_get_mac_address);
-			break;
-		} case (RPC_ID__Resp_GetWifiMode) : {
-			mem_free(resp->resp_get_wifi_mode);
-			break;
-		} case (RPC_ID__Resp_SetWifiMode ) : {
-			mem_free(resp->resp_set_wifi_mode);
-			break;
-		} case (RPC_ID__Resp_SetMacAddress) : {
-			mem_free(resp->resp_set_mac_address);
-			break;
-		} case (RPC_ID__Resp_WifiSetPs) : {
-			mem_free(resp->resp_wifi_set_ps);
-			break;
-		} case (RPC_ID__Resp_WifiGetPs) : {
-			mem_free(resp->resp_wifi_get_ps);
-			break;
-		} case (RPC_ID__Resp_OTABegin) : {
-			mem_free(resp->resp_ota_begin);
-			break;
-		} case (RPC_ID__Resp_OTAWrite) : {
-			mem_free(resp->resp_ota_write);
-			break;
-		} case (RPC_ID__Resp_OTAEnd) : {
-			mem_free(resp->resp_ota_end);
-			break;
-#if 0
-		} case (RPC_ID__Resp_SetSoftAPVendorSpecificIE) : {
-			mem_free(resp->resp_set_softap_vendor_specific_ie);
-			break;
-#endif
-		} case (RPC_ID__Resp_WifiSetMaxTxPower) : {
-			mem_free(resp->resp_set_wifi_max_tx_power);
-			break;
-		} case (RPC_ID__Resp_WifiGetMaxTxPower) : {
-			mem_free(resp->resp_get_wifi_max_tx_power);
-			break;
-		} case (RPC_ID__Resp_ConfigHeartbeat) : {
-			mem_free(resp->resp_config_heartbeat);
-			break;
-		} case (RPC_ID__Resp_WifiInit) : {
-			mem_free(resp->resp_wifi_init);
-			break;
-		} case (RPC_ID__Resp_WifiDeinit) : {
-			mem_free(resp->resp_wifi_deinit);
-			break;
-		} case (RPC_ID__Resp_WifiStart) : {
-			mem_free(resp->resp_wifi_start);
-			break;
-		} case (RPC_ID__Resp_WifiStop) : {
-			mem_free(resp->resp_wifi_stop);
-			break;
-		} case (RPC_ID__Resp_WifiConnect) : {
-			mem_free(resp->resp_wifi_connect);
-			break;
-		} case (RPC_ID__Resp_WifiDisconnect) : {
-			mem_free(resp->resp_wifi_disconnect);
-			break;
-		} case (RPC_ID__Resp_WifiSetConfig) : {
-			mem_free(resp->resp_wifi_set_config);
-			break;
-		} case (RPC_ID__Resp_WifiGetConfig) : {
-			// if req failed, internals of resp msg may not have been allocated
-			if (resp->resp_wifi_get_config->cfg) {
-				if (resp->resp_wifi_get_config->iface == WIFI_IF_STA) {
-					mem_free(resp->resp_wifi_get_config->cfg->sta->ssid.data);
-					mem_free(resp->resp_wifi_get_config->cfg->sta->password.data);
-					mem_free(resp->resp_wifi_get_config->cfg->sta->bssid.data);
-					mem_free(resp->resp_wifi_get_config->cfg->sta->threshold);
-					mem_free(resp->resp_wifi_get_config->cfg->sta->pmf_cfg);
-					mem_free(resp->resp_wifi_get_config->cfg->sta);
-				} else if (resp->resp_wifi_get_config->iface == WIFI_IF_AP) {
-					mem_free(resp->resp_wifi_get_config->cfg->ap->ssid.data);
-					mem_free(resp->resp_wifi_get_config->cfg->ap->password.data);
-					mem_free(resp->resp_wifi_get_config->cfg->ap->pmf_cfg);
-					mem_free(resp->resp_wifi_get_config->cfg->ap);
-				}
-				mem_free(resp->resp_wifi_get_config->cfg);
-			}
-			mem_free(resp->resp_wifi_get_config);
-			break;
-
-		} case RPC_ID__Resp_WifiScanStart: {
-			mem_free(resp->resp_wifi_scan_start);
-			break;
-		} case RPC_ID__Resp_WifiScanStop: {
-			mem_free(resp->resp_wifi_scan_stop);
-			break;
-		} case RPC_ID__Resp_WifiScanGetApNum: {
-			mem_free(resp->resp_wifi_scan_get_ap_num);
-			break;
-		} case RPC_ID__Resp_WifiScanGetApRecord: {
-			// if req failed, internals of resp msg may not have been allocated
-			if (resp->resp_wifi_scan_get_ap_record->ap_record) {
-				free_ap_record_content(resp->resp_wifi_scan_get_ap_record->ap_record);
-				mem_free(resp->resp_wifi_scan_get_ap_record->ap_record);
-			}
-			mem_free(resp->resp_wifi_scan_get_ap_record);
-			break;
-		} case RPC_ID__Resp_WifiScanGetApRecords: {
-			// if req failed, internals of resp msg may not have been allocated
-			if (resp->resp_wifi_scan_get_ap_records->ap_records)
-				for (int i=0 ; i<resp->resp_wifi_scan_get_ap_records->n_ap_records; i++) {
-					free_ap_record_content(resp->resp_wifi_scan_get_ap_records->ap_records[i]);
-					mem_free(resp->resp_wifi_scan_get_ap_records->ap_records[i]);
-				}
-			if (resp->resp_wifi_scan_get_ap_records->ap_records)
-				mem_free(resp->resp_wifi_scan_get_ap_records->ap_records);
-			mem_free(resp->resp_wifi_scan_get_ap_records);
-			break;
-		} case RPC_ID__Resp_WifiClearApList: {
-			mem_free(resp->resp_wifi_clear_ap_list);
-			break;
-		} case RPC_ID__Resp_WifiRestore: {
-			mem_free(resp->resp_wifi_restore);
-			break;
-		} case RPC_ID__Resp_WifiClearFastConnect: {
-			mem_free(resp->resp_wifi_clear_fast_connect);
-			break;
-		} case RPC_ID__Resp_WifiStaGetApInfo: {
-			// if req failed, internals of resp msg may not have been allocated
-			if (resp->resp_wifi_sta_get_ap_info->ap_record) {
-				free_ap_record_content(resp->resp_wifi_sta_get_ap_info->ap_record);
-				mem_free(resp->resp_wifi_sta_get_ap_info->ap_record);
-			}
-			mem_free(resp->resp_wifi_sta_get_ap_info);
-			break;
-		} case RPC_ID__Resp_WifiDeauthSta: {
-			mem_free(resp->resp_wifi_deauth_sta);
-			break;
-		} case RPC_ID__Resp_WifiSetStorage: {
-			mem_free(resp->resp_wifi_set_storage);
-			break;
-		} case RPC_ID__Resp_WifiSetProtocol: {
-			mem_free(resp->resp_wifi_set_protocol);
-			break;
-		} case RPC_ID__Resp_WifiGetProtocol: {
-			mem_free(resp->resp_wifi_get_protocol);
-			break;
-		} case RPC_ID__Resp_WifiSetBandwidth: {
-			mem_free(resp->resp_wifi_set_bandwidth);
-			break;
-		} case RPC_ID__Resp_WifiGetBandwidth: {
-			mem_free(resp->resp_wifi_get_bandwidth);
-			break;
-		} case RPC_ID__Resp_WifiSetChannel: {
-			mem_free(resp->resp_wifi_set_channel);
-			break;
-		} case RPC_ID__Resp_WifiGetChannel: {
-			mem_free(resp->resp_wifi_get_channel);
-			break;
-		} case RPC_ID__Resp_WifiSetCountryCode: {
-			mem_free(resp->resp_wifi_set_country_code);
-			break;
-		} case RPC_ID__Resp_WifiGetCountryCode: {
-			// if req failed, internals of resp msg may not have been allocated
-			if (resp->resp_wifi_get_country_code->country.data)
-				mem_free(resp->resp_wifi_get_country_code->country.data);
-			mem_free(resp->resp_wifi_get_country_code);
-			break;
-		} case RPC_ID__Resp_WifiSetCountry: {
-			mem_free(resp->resp_wifi_set_country);
-			break;
-		} case RPC_ID__Resp_WifiGetCountry: {
-			// if req failed, internals of resp msg may not have been allocated
-			if (resp->resp_wifi_get_country->country)
-				mem_free(resp->resp_wifi_get_country->country);
-			mem_free(resp->resp_wifi_get_country);
-			break;
-		} case RPC_ID__Resp_WifiApGetStaList: {
-			// if req failed, internals of resp msg may not have been allocated
-			if (resp->resp_wifi_ap_get_sta_list->sta_list) {
-				for(int i = 0; i < ESP_WIFI_MAX_CONN_NUM; i++) {
-					mem_free(resp->resp_wifi_ap_get_sta_list->sta_list->sta[i]->mac.data);
-					mem_free(resp->resp_wifi_ap_get_sta_list->sta_list->sta[i]);
-				}
-				mem_free(resp->resp_wifi_ap_get_sta_list->sta_list);
-			}
-			mem_free(resp->resp_wifi_ap_get_sta_list);
-			break;
-		} case RPC_ID__Resp_WifiApGetStaAid: {
-			mem_free(resp->resp_wifi_ap_get_sta_aid);
-			break;
-		} case RPC_ID__Resp_WifiStaGetRssi: {
-			mem_free(resp->resp_wifi_sta_get_rssi);
-			break;
-		} case RPC_ID__Resp_WifiStaGetNegotiatedPhymode: {
-			mem_free(resp->resp_wifi_sta_get_negotiated_phymode);
-			break;
-		} case RPC_ID__Resp_WifiStaGetAid: {
-			mem_free(resp->resp_wifi_sta_get_aid);
-			break;
-		} case RPC_ID__Resp_WifiSetProtocols: {
-			mem_free(resp->resp_wifi_set_protocols);
-			break;
-		} case RPC_ID__Resp_WifiGetProtocols: {
-			if (resp->resp_wifi_get_protocols->protocols)
-				mem_free(resp->resp_wifi_get_protocols->protocols);
-			mem_free(resp->resp_wifi_get_protocols);
-			break;
-		} case RPC_ID__Resp_WifiSetBandwidths: {
-			mem_free(resp->resp_wifi_set_bandwidths);
-			break;
-		} case RPC_ID__Resp_WifiGetBandwidths: {
-			if (resp->resp_wifi_get_bandwidths->bandwidths)
-				mem_free(resp->resp_wifi_get_bandwidths->bandwidths);
-			mem_free(resp->resp_wifi_get_bandwidths);
-			break;
-		} case RPC_ID__Resp_WifiSetBand: {
-			mem_free(resp->resp_wifi_set_band);
-			break;
-		} case RPC_ID__Resp_WifiGetBand: {
-			mem_free(resp->resp_wifi_get_band);
-			break;
-		} case RPC_ID__Resp_WifiSetBandMode: {
-			mem_free(resp->resp_wifi_set_bandmode);
-			break;
-		} case RPC_ID__Resp_WifiGetBandMode: {
-			mem_free(resp->resp_wifi_get_bandmode);
-			break;
-		} case RPC_ID__Resp_GetCoprocessorFwVersion: {
-			mem_free(resp->resp_get_coprocessor_fwversion);
-			break;
-		} case (RPC_ID__Event_ESPInit) : {
-			mem_free(resp->event_esp_init);
-			break;
-		} case (RPC_ID__Event_Heartbeat) : {
-			mem_free(resp->event_heartbeat);
-			break;
-		} case (RPC_ID__Event_AP_StaConnected) : {
-			//mem_free(resp->event_ap_sta_connected->mac.data);
-			mem_free(resp->event_ap_sta_connected);
-			break;
-		} case (RPC_ID__Event_AP_StaDisconnected) : {
-			//mem_free(resp->event_ap_sta_disconnected->mac.data);
-			mem_free(resp->event_ap_sta_disconnected);
-			break;
-		} case (RPC_ID__Event_StaScanDone) : {
-			mem_free(resp->event_sta_scan_done->scan_done);
-			mem_free(resp->event_sta_scan_done);
-			break;
-		} case (RPC_ID__Event_StaConnected) : {
-			mem_free(resp->event_sta_connected->sta_connected);
-			mem_free(resp->event_sta_connected);
-			break;
-		} case (RPC_ID__Event_StaDisconnected) : {
-			mem_free(resp->event_sta_disconnected->sta_disconnected);
-			mem_free(resp->event_sta_disconnected);
-			break;
-		} case RPC_ID__Event_WifiEventNoArgs: {
-			mem_free(resp->event_wifi_event_no_args);
-			break;
-		} default: {
-			ESP_LOGE(TAG, "Unsupported Rpc type[%u]",resp->msg_id);
-			break;
-		}
+	if (resp) {
+		rpc__free_unpacked(resp, NULL);
 	}
 }
 
 esp_err_t data_transfer_handler(uint32_t session_id,const uint8_t *inbuf,
 		ssize_t inlen, uint8_t **outbuf, ssize_t *outlen, void *priv_data)
 {
-	Rpc *req = NULL, resp = {0};
+	Rpc *req = NULL;
 	esp_err_t ret = ESP_OK;
+
+	Rpc *resp = (Rpc *)calloc(1, sizeof(Rpc)); // resp deallocated in esp_rpc_cleanup()
+	if (!resp) {
+		ESP_LOGE(TAG, "%s calloc failed", __func__);
+		return ESP_FAIL;
+	}
 
 	if (!inbuf || !outbuf || !outlen) {
 		ESP_LOGE(TAG,"Buffers are NULL");
@@ -2390,13 +2143,13 @@ esp_err_t data_transfer_handler(uint32_t session_id,const uint8_t *inbuf,
 		return ESP_FAIL;
 	}
 
-	rpc__init (&resp);
-	resp.msg_type = RPC_TYPE__Resp;
-	resp.msg_id = req->msg_id - RPC_ID__Req_Base + RPC_ID__Resp_Base;
-	resp.uid = req->uid;
-	resp.payload_case = resp.msg_id;
-	ESP_LOGI(TAG, "Resp_MSGId for req[0x%x] is [0x%x], uid %ld", req->msg_id, resp.msg_id, resp.uid);
-	ret = esp_rpc_command_dispatcher(req,&resp,NULL);
+	rpc__init (resp);
+	resp->msg_type = RPC_TYPE__Resp;
+	resp->msg_id = req->msg_id - RPC_ID__Req_Base + RPC_ID__Resp_Base;
+	resp->uid = req->uid;
+	resp->payload_case = resp->msg_id;
+	ESP_LOGI(TAG, "Resp_MSGId for req[0x%x] is [0x%x], uid %ld", req->msg_id, resp->msg_id, resp->uid);
+	ret = esp_rpc_command_dispatcher(req,resp,NULL);
 	if (ret) {
 		ESP_LOGE(TAG, "Command dispatching not happening");
 		goto err;
@@ -2404,7 +2157,7 @@ esp_err_t data_transfer_handler(uint32_t session_id,const uint8_t *inbuf,
 
 	rpc__free_unpacked(req, NULL);
 
-	*outlen = rpc__get_packed_size (&resp);
+	*outlen = rpc__get_packed_size (resp);
 	if (*outlen <= 0) {
 		ESP_LOGE(TAG, "Invalid encoding for response");
 		goto err;
@@ -2413,20 +2166,20 @@ esp_err_t data_transfer_handler(uint32_t session_id,const uint8_t *inbuf,
 	*outbuf = (uint8_t *)calloc(1, *outlen);
 	if (!*outbuf) {
 		ESP_LOGE(TAG, "No memory allocated for outbuf");
-		esp_rpc_cleanup(&resp);
+		esp_rpc_cleanup(resp);
 		return ESP_ERR_NO_MEM;
 	}
 
-	rpc__pack (&resp, *outbuf);
+	rpc__pack (resp, *outbuf);
 
 	//printf("Resp outbuf:\n");
 	//ESP_LOG_BUFFER_HEXDUMP("Resp outbuf", *outbuf, *outlen, ESP_LOG_INFO);
 
-	esp_rpc_cleanup(&resp);
+	esp_rpc_cleanup(resp);
 	return ESP_OK;
 
 err:
-	esp_rpc_cleanup(&resp);
+	esp_rpc_cleanup(resp);
 	return ESP_FAIL;
 }
 
@@ -2476,6 +2229,7 @@ static esp_err_t rpc_evt_sta_scan_done(Rpc *ntfy,
 {
 	WifiEventStaScanDone *p_c_scan = NULL;
 	wifi_event_sta_scan_done_t * p_a = (wifi_event_sta_scan_done_t*)data;
+
 	NTFY_TEMPLATE(RPC_ID__Event_StaScanDone,
 			RpcEventStaScanDone, event_sta_scan_done,
 			rpc__event__sta_scan_done__init);
@@ -2497,6 +2251,7 @@ static esp_err_t rpc_evt_sta_connected(Rpc *ntfy,
 {
 	WifiEventStaConnected *p_c = NULL;
 	wifi_event_sta_connected_t * p_a = (wifi_event_sta_connected_t*)data;
+
 	NTFY_TEMPLATE(RPC_ID__Event_StaConnected,
 			RpcEventStaConnected, event_sta_connected,
 			rpc__event__sta_connected__init);
@@ -2506,15 +2261,11 @@ static esp_err_t rpc_evt_sta_connected(Rpc *ntfy,
 
 	p_c = ntfy_payload->sta_connected;
 
-	// alloc not needed for ssid
-	p_c->ssid.data = p_a->ssid;
-	p_c->ssid.len = sizeof(p_a->ssid);
+	NTFY_COPY_BYTES(p_c->ssid, p_a->ssid, sizeof(p_a->ssid));
 
 	p_c->ssid_len = p_a->ssid_len;
 
-	// alloc not needed for bssid
-	p_c->bssid.data = p_a->bssid;
-	p_c->bssid.len = sizeof(p_a->bssid);
+	NTFY_COPY_BYTES(p_c->bssid, p_a->bssid, sizeof(p_a->bssid));
 
 	p_c->channel = p_a->channel;
 	p_c->authmode = p_a->authmode;
@@ -2529,6 +2280,7 @@ static esp_err_t rpc_evt_sta_disconnected(Rpc *ntfy,
 {
 	WifiEventStaDisconnected *p_c = NULL;
 	wifi_event_sta_disconnected_t * p_a = (wifi_event_sta_disconnected_t*)data;
+
 	NTFY_TEMPLATE(RPC_ID__Event_StaDisconnected,
 			RpcEventStaDisconnected, event_sta_disconnected,
 			rpc__event__sta_disconnected__init);
@@ -2538,15 +2290,11 @@ static esp_err_t rpc_evt_sta_disconnected(Rpc *ntfy,
 
 	p_c = ntfy_payload->sta_disconnected;
 
-	// alloc not needed for ssid
-	p_c->ssid.data = p_a->ssid;
-	p_c->ssid.len = sizeof(p_a->ssid);
+	NTFY_COPY_BYTES(p_c->ssid, p_a->ssid, sizeof(p_a->ssid));
 
 	p_c->ssid_len = p_a->ssid_len;
 
-	// alloc not needed for bssid:
-	p_c->bssid.data = p_a->bssid;
-	p_c->bssid.len = sizeof(p_a->bssid);
+	NTFY_COPY_BYTES(p_c->bssid, p_a->bssid, sizeof(p_a->bssid));
 
 	p_c->reason = p_a->reason;
 	p_c->rssi = p_a->rssi;
@@ -2558,57 +2306,35 @@ err:
 static esp_err_t rpc_evt_ap_staconn_conn_disconn(Rpc *ntfy,
 		const uint8_t *data, ssize_t len, int event_id)
 {
-	/* TODO: use NTFY_TEMPLATE */
 	ESP_LOGD(TAG, "%s event:%u",__func__,event_id);
-	if (event_id == WIFI_EVENT_AP_STACONNECTED) {
 
-		RpcEventAPStaConnected *ntfy_payload = NULL;
+	if (event_id == WIFI_EVENT_AP_STACONNECTED) {
+		NTFY_TEMPLATE(RPC_ID__Event_AP_StaConnected,
+				RpcEventAPStaConnected, event_ap_sta_connected,
+				rpc__event__ap__sta_connected__init);
+
 		wifi_event_ap_staconnected_t * p_a = (wifi_event_ap_staconnected_t *)data;
 
-		ntfy_payload = (RpcEventAPStaConnected*)
-			calloc(1,sizeof(RpcEventAPStaConnected));
-		if (!ntfy_payload) {
-			ESP_LOGE(TAG,"Failed to allocate memory");
-			return ESP_ERR_NO_MEM;
-		}
-		rpc__event__ap__sta_connected__init(ntfy_payload);
+		NTFY_COPY_BYTES(ntfy_payload->mac, p_a->mac, sizeof(p_a->mac));
 
-		ntfy->payload_case = RPC__PAYLOAD_EVENT_AP_STA_CONNECTED;
-		ntfy->event_ap_sta_connected = ntfy_payload;
 		ntfy_payload->aid = p_a->aid;
-		ntfy_payload->mac.len = BSSID_BYTES_SIZE;
 		ntfy_payload->is_mesh_child = p_a->is_mesh_child;
 
-		ntfy_payload->mac.data = p_a->mac;
-		//ntfy_payload->mac.data = (uint8_t *)calloc(1, BSSID_BYTES_SIZE);
-		//memcpy(ntfy_payload->mac.data,p_a->mac,BSSID_BYTES_SIZE);
-		ntfy_payload->resp = SUCCESS;
 		return ESP_OK;
 
 	} else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) {
-		RpcEventAPStaDisconnected *ntfy_payload = NULL;
+		NTFY_TEMPLATE(RPC_ID__Event_AP_StaDisconnected,
+				RpcEventAPStaDisconnected, event_ap_sta_disconnected,
+				rpc__event__ap__sta_disconnected__init);
+
 		wifi_event_ap_stadisconnected_t * p_a = (wifi_event_ap_stadisconnected_t *)data;
 
-		ntfy_payload = (RpcEventAPStaDisconnected*)
-			calloc(1,sizeof(RpcEventAPStaDisconnected));
-		if (!ntfy_payload) {
-			ESP_LOGE(TAG,"Failed to allocate memory");
-			return ESP_ERR_NO_MEM;
-		}
-		rpc__event__ap__sta_disconnected__init(ntfy_payload);
+		NTFY_COPY_BYTES(ntfy_payload->mac, p_a->mac, sizeof(p_a->mac));
 
-		ntfy->payload_case = RPC__PAYLOAD_EVENT_AP_STA_DISCONNECTED;
-		ntfy->event_ap_sta_disconnected = ntfy_payload;
 		ntfy_payload->aid = p_a->aid;
-		ntfy_payload->mac.len = BSSID_BYTES_SIZE;
 		ntfy_payload->is_mesh_child = p_a->is_mesh_child;
 		ntfy_payload->reason = p_a->reason;
 
-		//Note: alloc is not needed in this case
-		//ntfy_payload->mac.data = (uint8_t *)calloc(1, BSSID_BYTES_SIZE);
-		//memcpy(ntfy_payload->mac.data,p_a->mac,BSSID_BYTES_SIZE);
-		ntfy_payload->mac.data = p_a->mac;
-		ntfy_payload->resp = SUCCESS;
 		return ESP_OK;
 	}
 	return ESP_FAIL;
@@ -2617,82 +2343,76 @@ static esp_err_t rpc_evt_ap_staconn_conn_disconn(Rpc *ntfy,
 static esp_err_t rpc_evt_Event_WifiEventNoArgs(Rpc *ntfy,
 		const uint8_t *data, ssize_t len)
 {
-	RpcEventWifiEventNoArgs *ntfy_payload = NULL;
-	int32_t event_id = 0;
+	NTFY_TEMPLATE(RPC_ID__Event_WifiEventNoArgs,
+			RpcEventWifiEventNoArgs, event_wifi_event_no_args,
+			rpc__event__wifi_event_no_args__init);
 
-	ntfy_payload = (RpcEventWifiEventNoArgs*)
-		calloc(1,sizeof(RpcEventWifiEventNoArgs));
-	if (!ntfy_payload) {
-		ESP_LOGE(TAG,"Failed to allocate memory");
-		return ESP_ERR_NO_MEM;
-	}
-	rpc__event__wifi_event_no_args__init(ntfy_payload);
-
-	ntfy->payload_case = RPC__PAYLOAD_EVENT_WIFI_EVENT_NO_ARGS;
-	ntfy->event_wifi_event_no_args = ntfy_payload;
-
-	event_id = (int32_t)*data;
+	int32_t event_id = (int32_t)*data;
 	ESP_LOGI(TAG, "Sending Wi-Fi event [%ld]", event_id);
 
 	ntfy_payload->event_id = event_id;
 
-	ntfy_payload->resp = SUCCESS;
 	return ESP_OK;
 }
 
 esp_err_t rpc_evt_handler(uint32_t session_id,const uint8_t *inbuf,
 		ssize_t inlen, uint8_t **outbuf, ssize_t *outlen, void *priv_data)
 {
-	Rpc ntfy = {0};
 	int ret = SUCCESS;
+
+	Rpc *ntfy = (Rpc *)calloc(1, sizeof(Rpc)); // ntfy deallocated in esp_rpc_cleanup()
+	if (!ntfy) {
+		ESP_LOGE(TAG, "%s calloc failed", __func__);
+		return ESP_FAIL;
+	}
 
 	if (!outbuf || !outlen) {
 		ESP_LOGE(TAG,"Buffers are NULL");
 		return ESP_FAIL;
 	}
 
-	rpc__init (&ntfy);
-	ntfy.msg_id = session_id;
-	ntfy.msg_type = RPC_TYPE__Event;
+	rpc__init (ntfy);
+	ntfy->msg_id = session_id;
+	ntfy->msg_type = RPC_TYPE__Event;
 
-	switch ((int)ntfy.msg_id) {
+	switch ((int)ntfy->msg_id) {
 		case RPC_ID__Event_ESPInit : {
-			ret = rpc_evt_ESPInit(&ntfy);
+			ret = rpc_evt_ESPInit(ntfy);
 			break;
 		} case RPC_ID__Event_Heartbeat: {
-			ret = rpc_evt_heartbeat(&ntfy);
+			ret = rpc_evt_heartbeat(ntfy);
 			break;
 		} case RPC_ID__Event_AP_StaConnected: {
-			ret = rpc_evt_ap_staconn_conn_disconn(&ntfy, inbuf, inlen, WIFI_EVENT_AP_STACONNECTED);
+			ret = rpc_evt_ap_staconn_conn_disconn(ntfy, inbuf, inlen, WIFI_EVENT_AP_STACONNECTED);
 			break;
 		} case RPC_ID__Event_AP_StaDisconnected: {
-			ret = rpc_evt_ap_staconn_conn_disconn(&ntfy, inbuf, inlen, WIFI_EVENT_AP_STADISCONNECTED);
+			ret = rpc_evt_ap_staconn_conn_disconn(ntfy, inbuf, inlen, WIFI_EVENT_AP_STADISCONNECTED);
 			break;
 		} case RPC_ID__Event_StaScanDone: {
-			ret = rpc_evt_sta_scan_done(&ntfy, inbuf, inlen, WIFI_EVENT_SCAN_DONE);
+			ret = rpc_evt_sta_scan_done(ntfy, inbuf, inlen, WIFI_EVENT_SCAN_DONE);
 			break;
 		} case RPC_ID__Event_StaConnected: {
-			ret = rpc_evt_sta_connected(&ntfy, inbuf, inlen, WIFI_EVENT_STA_CONNECTED);
+			ret = rpc_evt_sta_connected(ntfy, inbuf, inlen, WIFI_EVENT_STA_CONNECTED);
 			break;
 		} case RPC_ID__Event_StaDisconnected: {
-			ret = rpc_evt_sta_disconnected(&ntfy, inbuf, inlen, WIFI_EVENT_STA_DISCONNECTED);
+			ret = rpc_evt_sta_disconnected(ntfy, inbuf, inlen, WIFI_EVENT_STA_DISCONNECTED);
 			break;
 		} case RPC_ID__Event_WifiEventNoArgs: {
-			ret = rpc_evt_Event_WifiEventNoArgs(&ntfy, inbuf, inlen);
+			ret = rpc_evt_Event_WifiEventNoArgs(ntfy, inbuf, inlen);
 			break;
 		} default: {
-			ESP_LOGE(TAG, "Incorrect/unsupported Ctrl Notification[%u]\n",ntfy.msg_id);
+			ESP_LOGE(TAG, "Incorrect/unsupported Ctrl Notification[%u]\n",ntfy->msg_id);
 			goto err;
 			break;
 		}
 	}
 
 	if (ret) {
-		ESP_LOGI(TAG, "notification[%u] not sent\n", ntfy.msg_id);
+		ESP_LOGI(TAG, "notification[%u] not sent\n", ntfy->msg_id);
 		goto err;
 	}
 
-	*outlen = rpc__get_packed_size (&ntfy);
+	*outlen = rpc__get_packed_size (ntfy);
 	if (*outlen <= 0) {
 		ESP_LOGE(TAG, "Invalid encoding for notify");
 		goto err;
@@ -2701,16 +2421,16 @@ esp_err_t rpc_evt_handler(uint32_t session_id,const uint8_t *inbuf,
 	*outbuf = (uint8_t *)calloc(1, *outlen);
 	if (!*outbuf) {
 		ESP_LOGE(TAG, "No memory allocated for outbuf");
-		esp_rpc_cleanup(&ntfy);
+		esp_rpc_cleanup(ntfy);
 		return ESP_ERR_NO_MEM;
 	}
 
-	rpc__pack (&ntfy, *outbuf);
+	rpc__pack (ntfy, *outbuf);
 
 	//printf("event outbuf:\n");
 	//ESP_LOG_BUFFER_HEXDUMP("event outbuf", *outbuf, *outlen, ESP_LOG_INFO);
 
-	esp_rpc_cleanup(&ntfy);
+	esp_rpc_cleanup(ntfy);
 	return ESP_OK;
 
 err:
@@ -2718,6 +2438,6 @@ err:
 		free(*outbuf);
 		*outbuf = NULL;
 	}
-	esp_rpc_cleanup(&ntfy);
+	esp_rpc_cleanup(ntfy);
 	return ESP_FAIL;
 }
