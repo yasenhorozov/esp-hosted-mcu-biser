@@ -90,7 +90,7 @@ The SPI used is full duplex. Handshake, Data Ready and Reset are additional GPIO
   - Host can send/receive up to 1600 bytes per transaction
 
 - TX buffer scenarios:
-  1. No data to transfer: 
+  1. No data to transfer:
      - Allocate 1600-byte dummy TX buffer
      - Set packet length field in payload header to 0
   2. Valid data to send:
@@ -132,7 +132,7 @@ For a detailed implementation of SPI full duplex communication using the ESP-Hos
 ### 4.1 General Considerations
 
 - Ensure equal trace lengths for all SPI connections, whether using jumper wires or PCB traces.
-- Use the lower clock frequency like 5 MHz for evaluation. Once solution verified, optimise the clock frequency in increasing steps to max possible value. To find out practical maximum SPI slave frequency for your co-processor, check `IDF_PERFORMANCE_MAX_SPI_CLK_FREQ` in [ESP-IDF SPI slave benchmark](https://github.com/espressif/esp-idf/blob/master/components/esp_driver_spi/test_apps/components/spi_bench_mark/include/spi_performance.h) 
+- Use the lower clock frequency like 5 MHz for evaluation. Once solution verified, optimise the clock frequency in increasing steps to max possible value. To find out practical maximum SPI slave frequency for your co-processor, check `IDF_PERFORMANCE_MAX_SPI_CLK_FREQ` in [ESP-IDF SPI slave benchmark](https://github.com/espressif/esp-idf/blob/master/components/esp_driver_spi/test_apps/components/spi_bench_mark/include/spi_performance.h)
 - Verify voltage compatibility between host and co-processor devices.
 - Provide proper power supply decoupling for both host and co-processor devices.
 
@@ -340,13 +340,13 @@ You can re-use your existing web server or create a new locally for testing. Bel
     - Open link `http://127.0.0.1:8080` in the browser and check if network_adapter.bin is available.
     - Right click and copy the complete URL of this network_adapter.bin and note somewhere.
 
-5. On the **host side**, use the `esp_hosted_ota` function to initiate the OTA update:
+5. On the **host side**, use the `esp_hosted_slave_ota` function to initiate the OTA update:
 
    ```c
    #include "esp_hosted_api.h"
 
    const char* image_url = "http://example.com/path/to/network_adapter.bin"; //web server full url
-   esp_err_t ret = esp_hosted_ota(image_url);
+   esp_err_t ret = esp_hosted_slave_ota(image_url);
    if (ret == ESP_OK) {
        printf("co-processor OTA update failed[%d]\n", ret);
    }
@@ -360,7 +360,7 @@ You can re-use your existing web server or create a new locally for testing. Bel
 
 > [!NOTE]
 >
->   A. The `esp_hosted_ota` function is part of the ESP-Hosted-MCU API and handles the OTA process through the transport layer. \
+>   A. The `esp_hosted_slave_ota` function is part of the ESP-Hosted-MCU API and handles the OTA process through the transport layer. \
 >   B. Ensure that your host application has web server connectivity to download the firmware file. \
 >   C. The co-processor device doesn't need to be connected to the web server for this OTA method.
 
