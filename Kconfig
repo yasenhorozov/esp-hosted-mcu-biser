@@ -483,7 +483,7 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 50000
 			endif
 
 			if !ESP_HOSTED_SDIO_4_BIT_BUS
-				config ESP_HOSTED_SDIO_PIN_D1	# kconfig ignore: multiple-definition
+				config ESP_HOSTED_SDIO_PIN_D1	# ignore: multiple-definition
 					int "D1 GPIO number (Interrupt Line)"
 					default 35 if IDF_TARGET_ESP32S3
 					default 15 if IDF_TARGET_ESP32P4
