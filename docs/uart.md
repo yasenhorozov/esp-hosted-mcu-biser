@@ -42,7 +42,7 @@ UART is supported on all ESP devices, and many other MCUs and operating systems.
 However, UART is a low-speed bus, and not recommended for environments where high network throughput (more than 1 Mbits/s) is required.
 
 > [!NOTE]
-> UART here is used to transport both Wi-Fi and Bluetooth data (VHCI). Do not confuse this with the standard Bluetooth over UART implementation (HCI), which does not support Wi-Fi.
+> UART is used to transport both Wi-Fi and Bluetooth data (as Hosted HCI). Do not confuse this with standard HCI sent over UART, which does not support Wi-Fi.
 
 ## 3 Hardware Considerations
 

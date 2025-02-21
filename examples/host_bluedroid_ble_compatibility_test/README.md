@@ -9,7 +9,7 @@ This example is to test the Bluetooth compatibility and mobile phones.
 
 This example has been modified to work with ESP-Hosted. The original ESP-IDF example is at [ https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/bluedroid/ble/ble_compatibility_test ].
 
-This example is able to run on the ESP32-P4 Dev Board, acting as the BT Host, connected to a ESP32 co-processor via the GPIO header, using SPI FD (full duplex) as ESP-Hosted transport (VHCI). The ESP32-P4 acts as the BT Controller. The following GPIO settings were used:
+This example is able to run on the ESP32-P4 Dev Board, acting as the BT Host, connected to a ESP32 co-processor via the GPIO header, using SPI FD (full duplex) as Hosted HCI transport. The ESP32-P4 acts as the BT Controller. The following GPIO settings were used:
 
 | SPI Function | ESP32 GPIO | ESP32-P4 GPIO |
 | :---         |       ---: |          ---: |

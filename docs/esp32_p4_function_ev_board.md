@@ -84,6 +84,12 @@ espressif/esp-extconn:
 It is always good to use `esp_wifi_remote` as it provides all the Wi-Fi config and a wrapper abstraction layer.
 But you can also evaluate without using it.
 
+> [!IMPORTANT]
+> Co-processor selection is done by wifi-remote. Ensure the correct
+> co-processor chip is selected in `Component config` -> `Wi-Fi
+> Remote` -> `choose slave target`. The target selected will affect
+> the ESP-Hosted transport options and default GPIOs used.
+
 ### 3.2. Configuring Defaults
 
 Edit the `sdkconfig.defaults.esp32p4` file such that, it would have following content:

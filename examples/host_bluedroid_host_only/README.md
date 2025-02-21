@@ -1,8 +1,8 @@
 | Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-S3 | ESP32-P4 | ESP32-H2 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | -------- | -------- | -------- |
 
-ESP-IDF ESP-Hosed VHCI Host
-===========================
+ESP-IDF ESP-Hosted Hosted HCI Host
+==================================
 
 This is a Bluetooth Host using ESP-Hosted as HCI IO to the BT Controller.
 
@@ -56,7 +56,7 @@ esp_bluedroid_attach_hci_driver(&operations);
 
 ### Hardware Required
 
-This example runs on the ESP32-P4 Dev Board connected to a ESP32 via the GPIO header, using SPI FD (full duplex) as ESP-Hosted transport (VHCI). The following GPIO settings were used:
+This example runs on the ESP32-P4 Dev Board connected to a ESP32 via the GPIO header, using SPI FD (full duplex) as Hosted HCI transport. The following GPIO settings were used:
 
 | SPI Function | ESP32 GPIO | ESP32-P4 GPIO |
 | :---         |       ---: |          ---: |
