@@ -3,10 +3,11 @@
 
 #include "rpc_core.h"
 #include "rpc_slave_if.h"
-#include "rpc_common.h"
-#include "adapter.h"
+#include "esp_hosted_rpc.h"
 #include "esp_log.h"
 #include "esp_hosted_wifi_config.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_bitmasks.h"
 
 DEFINE_LOG_TAG(rpc_req);
 

@@ -20,7 +20,8 @@
 #include "drivers/bt/hci_drv.h"
 
 #include "endian.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_spi_hd.h"
 #include "stats.h"
 #include "transport_drv.h"
 

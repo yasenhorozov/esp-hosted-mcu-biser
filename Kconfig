@@ -457,7 +457,7 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 50000
 					"Value can only be configured for some targets. Displayed always for reference."
 
 			if ESP_HOSTED_SDIO_4_BIT_BUS
-				config ESP_HOSTED_SDIO_PIN_D1
+				config ESP_HOSTED_SDIO_PRIV_PIN_D1_4BIT_BUS
 					int "D1 GPIO number"
 					default 35 if IDF_TARGET_ESP32S3
 					default 15 if IDF_TARGET_ESP32P4
@@ -483,7 +483,7 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 50000
 			endif
 
 			if !ESP_HOSTED_SDIO_4_BIT_BUS
-				config ESP_HOSTED_SDIO_PIN_D1	# ignore: multiple-definition
+				config ESP_HOSTED_SDIO_PRIV_PIN_D1_1BIT_BUS
 					int "D1 GPIO number (Interrupt Line)"
 					default 35 if IDF_TARGET_ESP32S3
 					default 15 if IDF_TARGET_ESP32P4
@@ -492,6 +492,10 @@ ESP32XX_SDIO_CLK_FREQ_KHZ_RANGE_MAX := 50000
 						"Value can only be configured for some targets. Displayed always for reference."
 			endif
 
+			config ESP_HOSTED_SDIO_PIN_D1
+				int
+				default ESP_HOSTED_SDIO_PRIV_PIN_D1_4BIT_BUS if ESP_HOSTED_SDIO_4_BIT_BUS
+				default ESP_HOSTED_SDIO_PRIV_PIN_D1_1BIT_BUS if !ESP_HOSTED_SDIO_4_BIT_BUS
 
 			config ESP_HOSTED_SDIO_TX_Q_SIZE
 				int "Host SDIO Tx queue size"

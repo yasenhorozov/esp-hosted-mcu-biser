@@ -20,7 +20,7 @@
 #include "transport_drv.h"
 #include "spi_drv.h"
 #include "serial_drv.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
 #include "esp_log.h"
 #include "esp_hosted_log.h"
 #include "stats.h"

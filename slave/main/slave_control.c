@@ -21,8 +21,9 @@
 #include "slave_control.h"
 #include "esp_hosted_rpc.pb-c.h"
 #include "esp_ota_ops.h"
-#include "rpc_common.h"
-#include "adapter.h"
+#include "esp_hosted_rpc.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_bitmasks.h"
 
 #include "coprocessor_fw_version.h"
 

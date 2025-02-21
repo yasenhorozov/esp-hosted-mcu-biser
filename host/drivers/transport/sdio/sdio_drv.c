@@ -23,6 +23,7 @@
 #include "esp_hosted_log.h"
 #include "hci_drv.h"
 #include "endian.h"
+#include "esp_hosted_transport_init.h"
 
 static const char TAG[] = "H_SDIO_DRV";
 

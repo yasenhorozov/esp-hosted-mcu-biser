@@ -24,14 +24,14 @@
 #include <time.h>
 #include "rpc_slave_if.h"
 #include "string.h"
-#include "adapter.h"
 #include "os_wrapper.h"
 #include "rpc_wrap.h"
-#include "rpc_common.h"
+#include "esp_hosted_rpc.h"
 #include "esp_log.h"
 #include "esp_http_client.h"
 #include "esp_hosted_wifi_config.h"
 #include "esp_hosted_api.h"
+#include "esp_hosted_transport.h"
 
 DEFINE_LOG_TAG(rpc_wrap);
 static char* OTA_TAG = "h_ota";

@@ -24,11 +24,14 @@
 #include "esp_hosted_log.h"
 #include "driver/uart.h"
 
-#include "adapter.h"
 #include "endian.h"
 #include "interface.h"
 #include "mempool.h"
 #include "stats.h"
+#include "esp_hosted_interface.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_init.h"
+#include "esp_hosted_header.h"
 
 #define HOSTED_UART                CONFIG_ESP_UART_PORT
 #define HOSTED_UART_GPIO_TX        CONFIG_ESP_UART_PIN_TX

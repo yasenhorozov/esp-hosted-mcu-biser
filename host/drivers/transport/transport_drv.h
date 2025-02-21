@@ -29,8 +29,11 @@ extern "C" {
 #include "trace.h"
 #endif
 //#include "netdev_if.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
 #include "esp_hosted_config.h"
+#include "esp_hosted_api_types.h"
+#include "esp_hosted_interface.h"
+#include "esp_hosted_header.h"
 
 /* ESP in sdkconfig has CONFIG_IDF_FIRMWARE_CHIP_ID entry.
  * supported values of CONFIG_IDF_FIRMWARE_CHIP_ID are - */

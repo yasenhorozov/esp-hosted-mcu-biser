@@ -24,7 +24,9 @@
 #include "slave_bt.h"
 #include "slave_bt_uart.h"
 #include "interface.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_init.h"
+#include "esp_hosted_interface.h"
 
 #ifdef CONFIG_BT_ENABLED
 #include "esp_log.h"
