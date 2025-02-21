@@ -442,7 +442,7 @@ esp_err_t esp_wifi_remote_get_bandwidths(wifi_interface_t ifx, wifi_bandwidths_t
 }
 #endif
 
-esp_err_t esp_hosted_ota(const char* image_url)
+esp_err_t esp_hosted_slave_ota(const char* image_url)
 {
 	return rpc_ota(image_url);
 }

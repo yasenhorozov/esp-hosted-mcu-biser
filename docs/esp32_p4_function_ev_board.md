@@ -222,13 +222,13 @@ idf.py build
 ```
 #include "esp_hosted.h"
 
-esp_err_t esp_hosted_ota_start(const char *url);
+esp_err_t esp_hosted_slave_ota(const char *url);
 ```
 
-7. Call the `esp_hosted_ota_start` function with the URL of the firmware binary:
+7. Call the `esp_hosted_slave_ota` function with the URL of the firmware binary:
 
 ```
-esp_err_t err = esp_hosted_ota_start("http://example.com/path/to/network_adapter.bin");
+esp_err_t err = esp_hosted_slave_ota("http://example.com/path/to/network_adapter.bin");
 if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to start OTA update: %s", esp_err_to_name(err));
 }
