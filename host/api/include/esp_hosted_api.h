@@ -15,10 +15,7 @@ extern "C" {
 /** Includes **/
 #include "stdbool.h"
 #include "esp_wifi.h"
-#include "transport_drv.h"
 #include "esp_wifi_remote.h"
-#include "esp_hosted_config.h"
-#include "esp_hosted_wifi_config.h"
 #include "esp_hosted_api_types.h"
 
 /** Exported variables **/
@@ -27,7 +24,7 @@ extern "C" {
 }
 
 struct esp_remote_channel_config {
-	esp_hosted_if_type_t if_type;
+	int if_type; // values should be of esp_hosted_if_type_t
 	bool secure;
 };
 

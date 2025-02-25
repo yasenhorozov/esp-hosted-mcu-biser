@@ -18,7 +18,8 @@
 
 #include "esp_wifi.h"
 #include "transport_drv.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_init.h"
 #include "stats.h"
 #include "esp_log.h"
 #include "esp_hosted_log.h"

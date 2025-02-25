@@ -3,10 +3,12 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 	set(FG_root_dir ".")
 	set(host_dir "${FG_root_dir}/host")
 
-	set(COMPONENT_ADD_INCLUDEDIRS "${host_dir}" "${host_dir}/api")
 	set(COMPONENT_SRCS "${host_dir}/esp_hosted_host_init.c" "${host_dir}/api/src/esp_wifi_weak.c" "${host_dir}/api/src/esp_hosted_api.c" "${host_dir}/drivers/transport/transport_drv.c" "${host_dir}/drivers/serial/serial_ll_if.c" "${host_dir}/utils/common.c" "${host_dir}/utils/util.c" "${host_dir}/utils/stats.c" "${host_dir}/drivers/serial/serial_drv.c")
 
-	list(APPEND COMPONENT_ADD_INCLUDEDIRS "." "${host_dir}/api/include" "${host_dir}/drivers/transport" "${host_dir}/drivers/transport/spi" "${host_dir}/drivers/transport/sdio" "${host_dir}/drivers/serial" "${host_dir}/utils")
+	# only these directories are public. Others are private
+	set(COMPONENT_ADD_PUBLIC_INCLUDEDIRS "${host_dir}" "${host_dir}/api/include")
+
+	set(COMPONENT_ADD_INCLUDEDIRS "${host_dir}/drivers/transport" "${host_dir}/drivers/transport/spi" "${host_dir}/drivers/transport/sdio" "${host_dir}/drivers/serial" "${host_dir}/utils")
 
 	# rpc files - wrap -> slaveif -> core
 	set(rpc_dir "${host_dir}/drivers/rpc")
@@ -30,7 +32,7 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 	# slave and host common files
 	set(common_dir "${FG_root_dir}/common")
 	list(APPEND COMPONENT_SRCS "${common_dir}/protobuf-c/protobuf-c/protobuf-c.c" "${common_dir}/proto/esp_hosted_rpc.pb-c.c" )
-	list(APPEND COMPONENT_ADD_INCLUDEDIRS "${common_dir}/include" "${common_dir}/protobuf-c" "${common_dir}/proto" )
+	list(APPEND COMPONENT_ADD_INCLUDEDIRS "${common_dir}" "${common_dir}/log" "${common_dir}/rpc" "${common_dir}/transport" "${common_dir}/protobuf-c" "${common_dir}/proto" )
 
 	# bt (NimBLE)
 	### TODO config for HCI over UART
@@ -53,19 +55,19 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 	endif()
 
 	# config files
-	list(APPEND COMPONENT_ADD_INCLUDEDIRS "${host_dir}/port")
-	list(APPEND COMPONENT_SRCS "${host_dir}/port/esp_hosted_config.c" "${host_dir}/port/esp_hosted_transport_config.c")
+	list(APPEND COMPONENT_ADD_INCLUDEDIRS "${host_dir}/port/include")
+	list(APPEND COMPONENT_SRCS "${host_dir}/port/src/esp_hosted_config.c" "${host_dir}/port/src/esp_hosted_transport_config.c")
 
 	# transport port files
-	list(APPEND COMPONENT_SRCS "${host_dir}/port/os_wrapper.c")
+	list(APPEND COMPONENT_SRCS "${host_dir}/port/src/os_wrapper.c")
 	if(CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE)
-		list(APPEND COMPONENT_SRCS "${host_dir}/port/sdio_wrapper.c")
+		list(APPEND COMPONENT_SRCS "${host_dir}/port/src/sdio_wrapper.c")
 	elseif(CONFIG_ESP_HOSTED_SPI_HD_HOST_INTERFACE)
-		list(APPEND COMPONENT_SRCS "${host_dir}/port/spi_hd_wrapper.c")
+		list(APPEND COMPONENT_SRCS "${host_dir}/port/src/spi_hd_wrapper.c")
 	elseif(CONFIG_ESP_HOSTED_SPI_HOST_INTERFACE)
-		list(APPEND COMPONENT_SRCS "${host_dir}/port/spi_wrapper.c")
+		list(APPEND COMPONENT_SRCS "${host_dir}/port/src/spi_wrapper.c")
 	elseif(CONFIG_ESP_HOSTED_UART_HOST_INTERFACE)
-		list(APPEND COMPONENT_SRCS "${host_dir}/port/uart_wrapper.c")
+		list(APPEND COMPONENT_SRCS "${host_dir}/port/src/uart_wrapper.c")
 	endif()
 
 endif()
@@ -73,7 +75,8 @@ endif()
 idf_component_register(SRCS ${COMPONENT_SRCS}
 	PRIV_REQUIRES soc esp_event esp_netif esp_timer driver esp_wifi bt esp_http_client
 	EXCLUDE_SRCS ${EXCLUDE_COMPONENT_SRCS}
-	INCLUDE_DIRS ${COMPONENT_ADD_INCLUDEDIRS})
+	INCLUDE_DIRS ${COMPONENT_ADD_PUBLIC_INCLUDEDIRS}
+	PRIV_INCLUDE_DIRS ${COMPONENT_ADD_INCLUDEDIRS})
 
 idf_component_set_property(${COMPONENT_NAME} WHOLE_ARCHIVE TRUE)
 

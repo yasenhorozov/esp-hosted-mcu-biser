@@ -90,7 +90,7 @@ uint8_t * serial_drv_read(struct serial_drv_handle_t *serial_drv_handle,
 	uint8_t* read_buf = NULL;
 	int ret = 0;
 	/* Any of `RPC_EP_NAME_EVT` and `RPC_EP_NAME_RSP` could be used,
-	 * as both have same strlen in adapter.h */
+	 * as both have same strlen in esp_hosted_transport.h */
 	const char* ep_name = RPC_EP_NAME_RSP;
 	uint8_t *buf = NULL;
 	uint32_t buf_len = 0;
@@ -249,5 +249,3 @@ static void rpc_rx_indication(void)
 		g_h.funcs->_h_post_semaphore(readSemaphore);
 	}
 }
-
-

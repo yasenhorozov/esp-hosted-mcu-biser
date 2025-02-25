@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "adapter.h"
+#include "esp_hosted_transport.h"
 #include "os_wrapper.h"
 #include "transport_drv.h"
 

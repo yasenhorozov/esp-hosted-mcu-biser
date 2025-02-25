@@ -21,7 +21,6 @@
 #include "soc/gpio_reg.h"
 #include "esp_log.h"
 #include "interface.h"
-#include "adapter.h"
 #include "driver/spi_slave.h"
 #include "driver/gpio.h"
 #include "endian.h"
@@ -29,6 +28,10 @@
 #include "mempool.h"
 #include "stats.h"
 #include "esp_timer.h"
+#include "esp_hosted_interface.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_init.h"
+#include "esp_hosted_header.h"
 
 static const char TAG[] = "SPI_DRIVER";
 /* SPI settings */

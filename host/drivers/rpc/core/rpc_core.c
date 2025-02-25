@@ -5,7 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include "rpc_core.h"
-#include "rpc_common.h"
+#include "esp_hosted_rpc.h"
 #include "serial_if.h"
 #include "serial_drv.h"
 #include <unistd.h>
