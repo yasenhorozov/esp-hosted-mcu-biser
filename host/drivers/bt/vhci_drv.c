@@ -79,7 +79,7 @@ int hci_rx_handler(interface_buffer_handle_t *buf_handle)
 			evbuf = ble_transport_alloc_evt(1);
 			/* Skip advertising report if we're out of memory */
 			if (!evbuf) {
-				ESP_LOGE(TAG, "Rx: failed transport_alloc_evt(1)");
+				ESP_LOGW(TAG, "Rx: Drop ADV Report Event: NimBLE OOM (not fatal)");
 				return ESP_FAIL;
 			}
 		} else {
