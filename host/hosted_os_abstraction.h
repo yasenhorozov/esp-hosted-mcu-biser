@@ -81,11 +81,11 @@ typedef struct {
 #if H_TRANSPORT_IN_USE == H_TRANSPORT_SDIO
           /* Transport - SDIO */
 /* 46 */ int (*_h_sdio_card_init)(void *ctx);
-/* 47 */ int (*_h_sdio_read_reg)(uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
-/* 48 */ int (*_h_sdio_write_reg)(uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
-/* 49 */ int (*_h_sdio_read_block)(uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
-/* 50 */ int (*_h_sdio_write_block)(uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
-/* 51 */ int (*_h_sdio_wait_slave_intr)(uint32_t ticks_to_wait);
+/* 47 */ int (*_h_sdio_read_reg)(void *ctx, uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
+/* 48 */ int (*_h_sdio_write_reg)(void *ctx, uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
+/* 49 */ int (*_h_sdio_read_block)(void *ctx, uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
+/* 50 */ int (*_h_sdio_write_block)(void *ctx, uint32_t reg, uint8_t *data, uint16_t size, bool lock_required);
+/* 51 */ int (*_h_sdio_wait_slave_intr)(void *ctx, uint32_t ticks_to_wait);
 #endif
 
 #if H_TRANSPORT_IN_USE == H_TRANSPORT_SPI_HD
