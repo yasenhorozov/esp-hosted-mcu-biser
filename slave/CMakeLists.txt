@@ -2,11 +2,14 @@
 # in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
+# Add the wrap flag for esp_wifi_init
+add_compile_options(-Wl,--wrap=esp_wifi_init)
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 list(APPEND EXCLUDE_COMPONENTS lwip esp_netif)
-#set(COMPONENTS main nvs_flash protocomm esp_rom)
-set(COMPONENTS esp_timer esptool_py bootloader main nvs_flash esp_rom esp_wifi protocomm driver)
-#set(COMPONENTS main nvs_flash protocomm esp_gdbstub) # incase gdbsub needed
+
+set(COMPONENTS esp_timer esptool_py bootloader main nvs_flash esp_rom esp_wifi protocomm driver mqtt)
+#list(APPEND COMPONENTS esp_gdbstub) # incase gdbstub needed
 project(network_adapter)
 idf_build_set_property(COMPILE_OPTIONS "-fdiagnostics-color=always" APPEND)
 
@@ -29,6 +32,16 @@ endif()
 add_custom_target(version_header DEPENDS "${PROJECT_DIR}/main/coprocessor_fw_version.h")
 add_dependencies(${PROJECT_NAME}.elf version_header)
 
-### clean up generated file when project is cleaned
-set_property(DIRECTORY "${PROJECT_DIR}" APPEND PROPERTY
-	ADDITIONAL_CLEAN_FILES "${PROJECT_DIR}/main/coprocessor_fw_version.h")
+
+if(EXISTS "${PROJECT_DIR}/../common/esp_hosted_lwip_src_port_hook.h")
+idf_component_get_property(lwip lwip COMPONENT_LIB)
+if(TARGET ${lwip})
+	# Use generator expressions to only apply to non-INTERFACE targets
+	get_target_property(lwip_type ${lwip} TYPE)
+	if(NOT lwip_type STREQUAL "INTERFACE_LIBRARY")
+		message(STATUS "********** Configuring LWIP for network split mode with custom hook **********")
+		target_include_directories(${lwip} PRIVATE "${PROJECT_DIR}/../common")
+		target_compile_definitions(${lwip} PRIVATE "-DESP_IDF_LWIP_HOOK_FILENAME=\"${PROJECT_DIR}/../common/esp_hosted_lwip_src_port_hook.h\"")
+	endif()
+endif()
+endif()
