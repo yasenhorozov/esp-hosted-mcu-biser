@@ -26,6 +26,7 @@
 #include "esp_hosted_transport.h"
 #include "esp_hosted_bitmasks.h"
 #include "slave_wifi_config.h"
+#include "esp_hosted_log.h"
 
 /* Slave-side: Always support reserved field decoding for maximum compatibility
  * The host may or may not have CONFIG_ESP_HOSTED_DECODE_WIFI_RESERVED_FIELD enabled
@@ -34,196 +35,35 @@
 
 #include "coprocessor_fw_version.h"
 
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+#include "esp_check.h"
+#include "lwip/inet.h"
+#include "host_power_save.h"
+#include "mqtt_example.h"
+#endif
+
 #define MAC_STR_LEN                 17
 #define MAC2STR(a)                  (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MACSTR                      "%02x:%02x:%02x:%02x:%02x:%02x"
 #define SUCCESS                     0
 #define FAILURE                     -1
-#define SSID_LENGTH                 32
-#define PASSWORD_LENGTH             64
 #define MIN_TX_POWER                8
 #define MAX_TX_POWER                84
-
-/* Bits for wifi connect event */
-#define WIFI_CONNECTED_BIT          BIT0
-#define WIFI_FAIL_BIT               BIT1
-#define WIFI_NO_AP_FOUND_BIT        BIT2
-#define WIFI_WRONG_PASSWORD_BIT     BIT3
-#define WIFI_HOST_REQUEST_BIT       BIT4
 
 #define MAX_STA_CONNECT_ATTEMPTS    3
 
 #define TIMEOUT_IN_MIN              (60*TIMEOUT_IN_SEC)
 #define TIMEOUT_IN_HOUR             (60*TIMEOUT_IN_MIN)
-#define TIMEOUT                     (2*TIMEOUT_IN_MIN)
 #define RESTART_TIMEOUT             (5*TIMEOUT_IN_SEC)
 
 #define MIN_HEARTBEAT_INTERVAL      (10)
 #define MAX_HEARTBEAT_INTERVAL      (60*60)
 
-#define mem_free(x)                 \
-        {                           \
-            if (x) {                \
-                free(x);            \
-                x = NULL;           \
-            }                       \
-        }
 
 
-#define NTFY_TEMPLATE(NtFy_MsgId, NtFy_TyPe, NtFy_StRuCt, InIt_FuN)             \
-	NtFy_TyPe *ntfy_payload = NULL;                                             \
-	ntfy_payload = (NtFy_TyPe*)calloc(1,sizeof(NtFy_TyPe));                     \
-	if (!ntfy_payload) {                                                        \
-		ESP_LOGE(TAG,"Failed to allocate memory");                              \
-		return ESP_ERR_NO_MEM;                                                  \
-	}                                                                           \
-	InIt_FuN(ntfy_payload);                                                     \
-	ntfy->payload_case = NtFy_MsgId;                                            \
-	ntfy->NtFy_StRuCt = ntfy_payload;                                           \
-	ntfy_payload->resp = SUCCESS;
-
-#define RPC_TEMPLATE(RspTyPe, RspStRuCt, ReqType, ReqStruct, InIt_FuN)         \
-  RspTyPe *resp_payload = NULL;                                                 \
-  ReqType *req_payload = NULL;                                                  \
-  if (!req || !resp || !req->ReqStruct) {                                      \
-    ESP_LOGE(TAG, "Invalid parameters");                                        \
-    return ESP_FAIL;                                                            \
-  }                                                                             \
-  req_payload = req->ReqStruct;                                                 \
-  resp_payload = (RspTyPe *)calloc(1, sizeof(RspTyPe));                         \
-  if (!resp_payload) {                                                          \
-      ESP_LOGE(TAG, "Failed to alloc mem for resp.%s\n",#RspStRuCt);            \
-      return ESP_ERR_NO_MEM;                                                    \
-  }                                                                             \
-  resp->RspStRuCt = resp_payload;                                               \
-  InIt_FuN(resp_payload);                                                       \
-  resp_payload->resp = SUCCESS;                                                 \
-
-
-/* Simple is same above just, we dod not need req_payload unused warning */
-#define RPC_TEMPLATE_SIMPLE(RspTyPe, RspStRuCt, ReqType, ReqStruct, InIt_FuN)  \
-  RspTyPe *resp_payload = NULL;                                                 \
-  if (!req || !resp) {                                                          \
-    ESP_LOGE(TAG, "Invalid parameters");                                        \
-    return ESP_FAIL;                                                            \
-  }                                                                             \
-  resp_payload = (RspTyPe *)calloc(1, sizeof(RspTyPe));                         \
-  if (!resp_payload) {                                                          \
-      ESP_LOGE(TAG, "Failed to alloc mem for resp.%s\n",#RspStRuCt);            \
-      return ESP_ERR_NO_MEM;                                                    \
-  }                                                                             \
-  resp->RspStRuCt = resp_payload;                                               \
-  InIt_FuN(resp_payload);                                                       \
-  resp_payload->resp = SUCCESS;                                                 \
-
-#define RPC_RESP_ASSIGN_FIELD(PaRaM)                                            \
-  resp_payload->PaRaM = PaRaM
-
-#define RPC_RET_FAIL_IF(ConDiTiOn) do {                                         \
-  int rEt = (ConDiTiOn);                                                        \
-  if (rEt) {                                                                    \
-    resp_payload->resp = rEt;                                                   \
-    ESP_LOGE(TAG, "%s:%u failed [%s] = [%d]", __func__,__LINE__,#ConDiTiOn, rEt); \
-    return ESP_OK;                                                              \
-  }                                                                             \
-} while(0);
-
-
-#define RPC_ALLOC_ELEMENT(TyPe,MsG_StRuCt,InIt_FuN) {                        \
-    TyPe *NeW_AllocN = (TyPe *)calloc(1, sizeof(TyPe));                       \
-    if (!NeW_AllocN) {                                                        \
-        ESP_LOGI(TAG,"Failed to allocate memory for req.%s\n",#MsG_StRuCt);   \
-        resp_payload->resp = RPC_ERR_MEMORY_FAILURE;                         \
-		goto err;                                                             \
-    }                                                                         \
-    MsG_StRuCt = NeW_AllocN;                                                  \
-    InIt_FuN(MsG_StRuCt);                                                     \
-}
-
-#define NTFY_ALLOC_ELEMENT(TyPe,MsG_StRuCt,InIt_FuN) {                        \
-    TyPe *NeW_AllocN = (TyPe *)calloc(1, sizeof(TyPe));                       \
-    if (!NeW_AllocN) {                                                        \
-        ESP_LOGI(TAG,"Failed to allocate memory for req.%s\n",#MsG_StRuCt);   \
-        ntfy_payload->resp = RPC_ERR_MEMORY_FAILURE;                         \
-		goto err;                                                             \
-    }                                                                         \
-    MsG_StRuCt = NeW_AllocN;                                                  \
-    InIt_FuN(MsG_StRuCt);                                                     \
-}
-
-#define NTFY_COPY_BYTES(dest, src, num)                                         \
-  do {                                                                          \
-    if (num) {                                                                  \
-      dest.data = (uint8_t *)calloc(1, num);                                    \
-      if (!dest.data) {                                                         \
-        ESP_LOGE(TAG, "%s:%u Failed to duplicate bytes\n",__func__,__LINE__);   \
-        ntfy_payload->resp = FAILURE;                                           \
-        return ESP_OK;                                                          \
-      }                                                                         \
-      memcpy(dest.data, src, num);                                              \
-	  dest.len = num;                                                           \
-    }                                                                           \
-  } while(0)
-
-#define RPC_REQ_COPY_BYTES(dest, src, num_bytes)                               \
-  if (src.len && src.data)                                                      \
-    memcpy((char*)dest, src.data, min(min(sizeof(dest), num_bytes), src.len));
-
-#define RPC_REQ_COPY_STR RPC_REQ_COPY_BYTES
-
-
-#define RPC_RESP_COPY_STR(dest, src, max_len)                                  \
-  if (src) {                                                                    \
-    dest.data = (uint8_t*)strndup((char*)src, max_len);                         \
-    if (!dest.data) {                                                           \
-      ESP_LOGE(TAG, "%s:%u Failed to duplicate bytes\n",__func__,__LINE__);     \
-      resp_payload->resp = FAILURE;                                             \
-      return ESP_OK;                                                            \
-    }                                                                           \
-	dest.len = min(max_len,strlen((char*)src)+1);                               \
-  }
-
-#define RPC_RESP_COPY_BYTES_SRC_UNCHECKED(dest, src, num)                      \
-  do {                                                                          \
-    if (num) {                                                                  \
-      dest.data = (uint8_t *)calloc(1, num);                                    \
-      if (!dest.data) {                                                         \
-        ESP_LOGE(TAG, "%s:%u Failed to duplicate bytes\n",__func__,__LINE__);   \
-        resp_payload->resp = FAILURE;                                           \
-        return ESP_OK;                                                          \
-      }                                                                         \
-      memcpy(dest.data, src, num);                                              \
-	  dest.len = num;                                                           \
-    }                                                                           \
-  } while(0)
-
-#define RPC_RESP_COPY_BYTES(dest, src, num)                                    \
-  if (src) {                                                                    \
-    RPC_RESP_COPY_BYTES_SRC_UNCHECKED(dest, src, num);                         \
-  }
-
-#define RPC_COPY_STR(dest, src, max_len)                                        \
-  if (src) {                                                                    \
-    dest.data = (uint8_t*)strndup((char*)src, max_len);                         \
-    if (!dest.data) {                                                           \
-      ESP_LOGE(TAG, "%s:%u Failed to duplicate bytes\n",__func__,__LINE__);     \
-      return FAILURE;                                                           \
-    }                                                                           \
-	dest.len = min(max_len,strlen((char*)src)+1);                               \
-  }
-
-#define RPC_COPY_BYTES(dest, src, num)                                          \
-  do {                                                                          \
-    if (num) {                                                                  \
-      dest.data = (uint8_t *)calloc(1, num);                                    \
-      if (!dest.data) {                                                         \
-        ESP_LOGE(TAG, "%s:%u Failed to duplicate bytes\n",__func__,__LINE__);   \
-        return FAILURE;                                                         \
-      }                                                                         \
-      memcpy(dest.data, src, num);                                              \
-	  dest.len = num;                                                           \
-    }                                                                           \
-  } while(0)
+static wifi_config_t new_wifi_config = {0};
+static bool new_config_recvd = false;
+static wifi_event_sta_connected_t lkg_sta_connected_event = {0};
 
 typedef struct esp_rpc_cmd {
 	int req_num;
@@ -232,12 +72,18 @@ typedef struct esp_rpc_cmd {
 } esp_rpc_req_t;
 
 
-static const char* TAG = "slave_ctrl";
+static const char* TAG = "slave_rpc";
 static TimerHandle_t handle_heartbeat_task;
 static uint32_t hb_num;
 
 /* FreeRTOS event group to signal when we are connected*/
 static esp_event_handler_instance_t instance_any_id;
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+static esp_event_handler_instance_t instance_ip;
+extern volatile uint8_t station_got_ip;
+static rpc_dhcp_dns_status_t s2h_dhcp_dns = {0};
+
+#endif
 
 static esp_ota_handle_t handle;
 const esp_partition_t* update_partition = NULL;
@@ -248,11 +94,132 @@ extern esp_err_t wlan_ap_rx_callback(void *buffer, uint16_t len, void *eb);
 
 extern volatile uint8_t station_connected;
 extern volatile uint8_t softap_started;
+static volatile bool station_connecting = false;
+static volatile bool wifi_started = false;
+static volatile bool wifi_initialized = false;
+
+static void send_wifi_event_data_to_host(int event, void *event_data, int event_size)
+{
+	send_event_data_to_host(event, event_data, event_size);
+}
+
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+/* DHCP/DNS event handling */
+void send_dhcp_dns_info_to_host(uint8_t network_up, uint8_t send_wifi_connected)
+{
+    rpc_dhcp_dns_status_t s2h_dhcp_dns_DOWN = {0};
+    rpc_dhcp_dns_status_t *evnt_to_send = &s2h_dhcp_dns_DOWN;
+
+    if (network_up && s2h_dhcp_dns.dhcp_up && s2h_dhcp_dns.net_link_up && s2h_dhcp_dns.dns_up) {
+        evnt_to_send = &s2h_dhcp_dns;
+    }
+    send_event_data_to_host(RPC_ID__Event_DhcpDnsStatus,
+            evnt_to_send, sizeof(rpc_dhcp_dns_status_t));
+
+	vTaskDelay(pdMS_TO_TICKS(10));
+    if (send_wifi_connected && station_connected) {
+        send_wifi_event_data_to_host(RPC_ID__Event_StaConnected,
+            &lkg_sta_connected_event, sizeof(wifi_event_sta_connected_t));
+    }
+
+	ESP_EARLY_LOGI(TAG, "Send DHCP-DNS status to Host: IP: %s, NM: %s, GW: %s, DNS IP: %s, Type: %"PRId32,
+			(char *)evnt_to_send->dhcp_ip,
+			(char *)evnt_to_send->dhcp_nm,
+			(char *)evnt_to_send->dhcp_gw,
+			(char *)evnt_to_send->dns_ip,
+			evnt_to_send->dns_type);
+}
+
+/* Get DNS information */
+esp_err_t get_slave_dns(wifi_interface_t iface, esp_netif_dns_info_t *dns)
+{
+    esp_netif_t *netif = NULL;
+
+    if (!dns) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (iface == WIFI_IF_STA) {
+        netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    } else if (iface == WIFI_IF_AP) {
+        netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    }
+
+    if (!netif) {
+        return ESP_FAIL;
+    }
+
+    return esp_netif_get_dns_info(netif, ESP_NETIF_DNS_MAIN, dns);
+}
+
+/* Set DNS information */
+esp_err_t set_slave_dns(wifi_interface_t iface, char *ip, uint8_t type)
+{
+    esp_netif_t *netif = NULL;
+    esp_netif_dns_info_t dns = {0};
+
+    if (!ip) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (iface == WIFI_IF_STA) {
+        netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    } else if (iface == WIFI_IF_AP) {
+        netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    }
+
+    if (!netif) {
+        return ESP_FAIL;
+    }
+
+    /* Convert IP string to IP address */
+    if (esp_netif_str_to_ip4(ip, &dns.ip.u_addr.ip4) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    dns.ip.type = type;
+    return esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns);
+}
+
+/* Get static IP information */
+esp_err_t get_slave_static_ip(wifi_interface_t iface, esp_netif_ip_info_t *ip_info, uint8_t *netlink_up)
+{
+    esp_netif_t *netif = NULL;
+
+    if (!ip_info || !netlink_up) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (iface == WIFI_IF_STA) {
+        netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    } else if (iface == WIFI_IF_AP) {
+        netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    }
+
+    if (!netif) {
+        return ESP_FAIL;
+    }
+
+    /* Get network interface status */
+    *netlink_up = esp_netif_is_netif_up(netif);
+
+    /* Get IP info only if interface is up */
+    if (*netlink_up) {
+        return esp_netif_get_ip_info(netif, ip_info);
+    }
+
+    /* Clear IP info if interface is down */
+    memset(ip_info, 0, sizeof(esp_netif_ip_info_t));
+	return ESP_OK;
+}
+#endif /* CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED */
+
 
 /* OTA end timer callback */
 void vTimerCallback( TimerHandle_t xTimer )
 {
 	xTimerDelete(xTimer, 0);
+	esp_unregister_shutdown_handler((shutdown_handler_t)esp_wifi_stop);
 	esp_restart();
 }
 
@@ -298,39 +265,44 @@ static esp_err_t req_wifi_get_mode(Rpc *req,
 static esp_err_t req_wifi_set_mode(Rpc *req,
 		Rpc *resp, void *priv_data)
 {
-	wifi_mode_t num = 0;
+    wifi_mode_t current_mode = WIFI_MODE_NULL;
+    RPC_TEMPLATE(RpcRespSetMode, resp_set_wifi_mode,
+            RpcReqSetMode, req_set_wifi_mode,
+            rpc__resp__set_mode__init);
 
-	RPC_TEMPLATE(RpcRespSetMode, resp_set_wifi_mode,
-			RpcReqSetMode, req_set_wifi_mode,
-			rpc__resp__set_mode__init);
+    /* Get current mode first */
+    RPC_RET_FAIL_IF(esp_wifi_get_mode(&current_mode));
 
-	num = req_payload->mode;
-	RPC_RET_FAIL_IF(esp_wifi_set_mode(num));
-
-	return ESP_OK;
+    /* Only set if different */
+    if (current_mode != req_payload->mode) {
+        RPC_RET_FAIL_IF(esp_wifi_set_mode(req_payload->mode));
+    }
+    return ESP_OK;
 }
 
 /* Function sets MAC address for station/softap */
 static esp_err_t req_wifi_set_mac(Rpc *req,
 		Rpc *resp, void *priv_data)
 {
-	uint8_t * mac = NULL;
+	uint8_t current_mac[BSSID_BYTES_SIZE] = {0};
 
 	RPC_TEMPLATE(RpcRespSetMacAddress, resp_set_mac_address,
 			RpcReqSetMacAddress, req_set_mac_address,
 			rpc__resp__set_mac_address__init);
 
 	if (!req_payload->mac.data || (req_payload->mac.len != BSSID_BYTES_SIZE)) {
-		ESP_LOGE(TAG, "Invalid MAC address data or len: %d", req->req_set_mac_address->mac.len);
+		ESP_LOGE(TAG, "Invalid MAC address data or len: %d", req_payload->mac.len);
 		resp_payload->resp = ESP_ERR_INVALID_ARG;
-		goto err;
+		return ESP_OK;
 	}
 
-	mac = req_payload->mac.data;
-	ESP_LOGD(TAG, "mac: " MACSTR, MAC2STR(mac));
+	/* Get current MAC first */
+	RPC_RET_FAIL_IF(esp_wifi_get_mac(req_payload->mode, current_mac));
 
-	RPC_RET_FAIL_IF(esp_wifi_set_mac(req_payload->mode, mac));
-err:
+	/* Only set if different */
+	if (memcmp(current_mac, req_payload->mac.data, BSSID_BYTES_SIZE) != 0) {
+		RPC_RET_FAIL_IF(esp_wifi_set_mac(req_payload->mode, req_payload->mac.data));
+	}
 	return ESP_OK;
 }
 
@@ -338,11 +310,20 @@ err:
 static esp_err_t req_wifi_set_ps(Rpc *req,
 		Rpc *resp, void *priv_data)
 {
-	RPC_TEMPLATE(RpcRespSetPs, resp_wifi_set_ps,
-			RpcReqSetPs, req_wifi_set_ps,
-			rpc__resp__set_ps__init);
-	RPC_RET_FAIL_IF(esp_wifi_set_ps(req_payload->type));
-	return ESP_OK;
+    wifi_ps_type_t current_ps = WIFI_PS_NONE;
+
+    RPC_TEMPLATE(RpcRespSetPs, resp_wifi_set_ps,
+            RpcReqSetPs, req_wifi_set_ps,
+            rpc__resp__set_ps__init);
+
+    /* Get current power save type first */
+    RPC_RET_FAIL_IF(esp_wifi_get_ps(&current_ps));
+
+    /* Only set if different */
+    if (current_ps != req_payload->type) {
+        RPC_RET_FAIL_IF(esp_wifi_set_ps(req_payload->type));
+    }
+    return ESP_OK;
 }
 
 /* Function returns current power save mode */
@@ -529,8 +510,8 @@ static esp_err_t req_set_softap_vender_specific_ie_handler (Rpc *req,
 		ESP_LOGI(TAG,"Enable softap vendor IE\n");
 
 		if (!p_vid ||
-			!p_vid->payload.len ||
-			!p_vid->payload.data) {
+		    !p_vid->payload.len ||
+		    !p_vid->payload.data) {
 			ESP_LOGE(TAG, "Invalid parameters");
 			return ESP_FAIL;
 		}
@@ -619,7 +600,7 @@ static void heartbeat_timer_cb(TimerHandle_t xTimer)
 static void stop_heartbeat(void)
 {
 	if (handle_heartbeat_task &&
-		xTimerIsTimerActive(handle_heartbeat_task)) {
+	    xTimerIsTimerActive(handle_heartbeat_task)) {
 		ESP_LOGI(TAG, "Stopping HB timer");
 		xTimerStop(handle_heartbeat_task, portMAX_DELAY);
 		xTimerDelete(handle_heartbeat_task, portMAX_DELAY);
@@ -688,7 +669,92 @@ static esp_err_t req_config_heartbeat(Rpc *req,
 }
 
 
-static void event_handler(void* arg, esp_event_base_t event_base,
+
+#if CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+static void event_handler_ip(void* arg, esp_event_base_t event_base,
+			int32_t event_id, void* event_data)
+{
+	char ip_s[16] = {0};
+	char nm_s[16] = {0};
+	char gw_s[16] = {0};
+	char dns_ip_s[16] = {0};
+
+	if (event_base == IP_EVENT) {
+		switch (event_id) {
+
+		case IP_EVENT_STA_GOT_IP: {
+			ESP_LOGI(TAG, "Got IP");
+			ip_event_got_ip_t* event = event_data;
+			esp_netif_t *netif = event->esp_netif;
+			esp_netif_dns_info_t dns = {0};
+
+			//memcpy(&lkg_sta_got_ip_event, event_data, sizeof(ip_event_got_ip_t));
+			ESP_ERROR_CHECK(esp_wifi_internal_set_sta_ip());
+			ESP_ERROR_CHECK(esp_netif_get_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns));
+
+			esp_ip4addr_ntoa(&event->ip_info.ip, ip_s, sizeof(ip_s));
+			esp_ip4addr_ntoa(&event->ip_info.netmask, nm_s, sizeof(nm_s));
+			esp_ip4addr_ntoa(&event->ip_info.gw, gw_s, sizeof(gw_s));
+			esp_ip4addr_ntoa(&dns.ip.u_addr.ip4, dns_ip_s, sizeof(dns_ip_s));
+
+			ESP_LOGI(TAG, "Slave sta dhcp {IP[%s] NM[%s] GW[%s]} dns{type[%u] ip[%s]}",
+					ip_s, nm_s, gw_s, dns.ip.type, dns_ip_s);
+
+			s2h_dhcp_dns.net_link_up = 1;
+			s2h_dhcp_dns.dhcp_up     = 1;
+			s2h_dhcp_dns.dns_up      = 1;
+			strlcpy((char*)s2h_dhcp_dns.dhcp_ip, ip_s, sizeof(s2h_dhcp_dns.dhcp_ip));
+			strlcpy((char*)s2h_dhcp_dns.dhcp_nm, nm_s, sizeof(s2h_dhcp_dns.dhcp_nm));
+			strlcpy((char*)s2h_dhcp_dns.dhcp_gw, gw_s, sizeof(s2h_dhcp_dns.dhcp_gw));
+			strlcpy((char*)s2h_dhcp_dns.dns_ip, dns_ip_s, sizeof(s2h_dhcp_dns.dns_ip));
+			s2h_dhcp_dns.dns_type = ESP_NETIF_DNS_MAIN;
+
+
+			//send_dhcp_dns_info_to_host(1, 0);
+			station_got_ip = 1;
+#ifdef CONFIG_ESP_HOSTED_COPROCESSOR_EXAMPLE_MQTT
+			example_mqtt_resume();
+#endif
+			break;
+		} case IP_EVENT_STA_LOST_IP: {
+#ifdef CONFIG_ESP_HOSTED_COPROCESSOR_EXAMPLE_MQTT
+			example_mqtt_pause();
+#endif
+			ESP_LOGI(TAG, "Lost IP address");
+			station_got_ip = 0;
+			memset(&s2h_dhcp_dns, 0, sizeof(s2h_dhcp_dns));
+			//send_dhcp_dns_info_to_host(0, 0);
+			break;
+		}
+
+		}
+	}
+}
+
+
+extern esp_netif_t *slave_sta_netif;
+
+static esp_err_t set_slave_static_ip(wifi_interface_t iface, char *ip, char *nm, char *gw)
+{
+
+	esp_netif_ip_info_t ip_info = {0};
+
+	ESP_RETURN_ON_FALSE(iface == WIFI_IF_STA, ESP_FAIL, TAG, "only sta iface supported yet");
+
+	ip_info.ip.addr = ipaddr_addr(ip);
+	ip_info.netmask.addr = ipaddr_addr(nm);
+	ip_info.gw.addr = ipaddr_addr(gw);
+
+	ESP_LOGI(TAG, "Set static IP addr ip:%s nm:%s gw:%s", ip, nm, gw);
+	ESP_ERROR_CHECK(esp_netif_set_ip_info(slave_sta_netif, &ip_info));
+	esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_STA, (wifi_rxcb_t) wlan_sta_rx_callback);
+
+	return ESP_OK;
+}
+#endif
+
+#include "esp_wifi_netif.h"
+static void event_handler_wifi(void* arg, esp_event_base_t event_base,
 		int32_t event_id, void* event_data)
 {
 	if (event_base == WIFI_EVENT) {
@@ -712,14 +778,39 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 					event_data, sizeof(wifi_event_sta_scan_done_t));
 		} else if (event_id == WIFI_EVENT_STA_CONNECTED) {
 			ESP_LOGI(TAG, "Sta mode connected");
+			if (new_config_recvd) {
+				ESP_LOGI(TAG, "New wifi config still unapplied, applying it");
+				/* Still not applied new config, so apply it */
+				int ret = esp_wifi_set_config(WIFI_IF_STA, &new_wifi_config);
+				if (ret) {
+					ESP_LOGE(TAG, "Error[0x%x] while setting the wifi config", ret);
+				} else {
+					new_config_recvd = 0;
+				}
+				esp_wifi_disconnect();
+				return;
+			}
+			station_connecting = false;
 			send_event_data_to_host(RPC_ID__Event_StaConnected,
 				event_data, sizeof(wifi_event_sta_connected_t));
+			memcpy(&lkg_sta_connected_event, event_data, sizeof(wifi_event_sta_connected_t));
 			esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_STA, (wifi_rxcb_t) wlan_sta_rx_callback);
 			station_connected = true;
 		} else if (event_id == WIFI_EVENT_STA_DISCONNECTED) {
 			station_connected = false;
+			if (new_config_recvd) {
+				ESP_LOGI(TAG, "New wifi config still unapplied, applying it");
+				/* Still not applied new config, so apply it */
+				int ret = esp_wifi_set_config(WIFI_IF_STA, &new_wifi_config);
+				if (ret) {
+					ESP_LOGE(TAG, "Error[0x%x] while setting the wifi config", ret);
+				} else {
+					new_config_recvd = 0;
+				}
+			}
 			esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_STA, NULL);
 			ESP_LOGI(TAG, "Sta mode disconnect");
+			station_connecting = false;
 			send_event_data_to_host(RPC_ID__Event_StaDisconnected,
 				event_data, sizeof(wifi_event_sta_disconnected_t));
 		} else {
@@ -732,9 +823,24 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 				esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_AP, NULL);
 				softap_started = 0;
 			}
-
+#if 0
+			if (event_id == WIFI_EVENT_STA_START && station_connected) {
+				ESP_LOGI(TAG, "Sta mode start, send connected event");
+				//station_connecting = false;
+				//send_event_data_to_host(RPC_ID__Event_StaConnected,
+				//	&lkg_sta_connected_event, sizeof(wifi_event_sta_connected_t));
+			}
+#endif
+			if (event_id == WIFI_EVENT_STA_START) {
+				wifi_started = true;
+				station_connecting = true;
+				esp_wifi_connect();
+			} else if (event_id == WIFI_EVENT_STA_STOP) {
+				wifi_started = false;
+				station_connecting = false;
+			}
 			send_event_data_to_host(RPC_ID__Event_WifiEventNoArgs,
-					&event_id, sizeof(event_id));
+				&event_id, sizeof(event_id));
 		}
 	}
 }
@@ -836,8 +942,241 @@ static wifi_init_config_t * get_merged_init_config(wifi_init_config_t *dst_confi
 	return dst_config;
 }
 
+esp_err_t esp_hosted_register_wifi_event_handlers(void)
+{
+	int ret1;
+
+	esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &instance_any_id);
+
+	ret1 = esp_event_handler_instance_register(WIFI_EVENT,
+				ESP_EVENT_ANY_ID,
+				&event_handler_wifi,
+				NULL,
+				&instance_any_id);
+
+	if (ret1) {
+		ESP_LOGW(TAG, "Failed to register WiFi events");
+	}
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+	int ret2, ret3;
+
+	esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &instance_any_id);
+	ret2 = esp_event_handler_instance_register(IP_EVENT,
+				IP_EVENT_STA_GOT_IP,
+				&event_handler_ip,
+				NULL,
+				&instance_ip);
+	esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_LOST_IP, &instance_any_id);
+	ret3 = esp_event_handler_instance_register(IP_EVENT,
+				IP_EVENT_STA_LOST_IP,
+				&event_handler_ip,
+				NULL,
+				&instance_ip);
+
+	if (ret2 || ret3) {
+		ESP_LOGW(TAG, "Failed to register IP events");
+	}
+#endif
+	return ESP_OK;
+}
+
+/* Cached WiFi init configuration for comparison when reinitializing */
+static wifi_init_config_t cached_wifi_init_config = {0};
+static bool has_cached_config = false;
+
+/* External declaration of the real esp_wifi_init function */
+extern esp_err_t __real_esp_wifi_init(const wifi_init_config_t *config);
+
+/**
+ * @brief Compare only the relevant wifi init config fields that we care about
+ *
+ * This function compares only the specific fields that are set in req_wifi_init()
+ * to determine if we need to reinitialize WiFi
+ */
+static bool wifi_init_config_changed(const wifi_init_config_t *new_cfg, const wifi_init_config_t *cached_cfg)
+{
+    if (!new_cfg || !cached_cfg) {
+        ESP_LOGI(TAG, "WiFi init config comparison: One of the configs is NULL");
+        return true;
+    }
+
+    /* Compare only the fields that are explicitly set in req_wifi_init */
+    bool changed = false;
+
+    if (new_cfg->static_rx_buf_num != cached_cfg->static_rx_buf_num) {
+        ESP_LOGI(TAG, "WiFi init config: static_rx_buf_num changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->static_rx_buf_num, (unsigned long)new_cfg->static_rx_buf_num);
+        changed = true;
+    }
+
+    if (new_cfg->dynamic_rx_buf_num != cached_cfg->dynamic_rx_buf_num) {
+        ESP_LOGI(TAG, "WiFi init config: dynamic_rx_buf_num changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->dynamic_rx_buf_num, (unsigned long)new_cfg->dynamic_rx_buf_num);
+        changed = true;
+    }
+
+    if (new_cfg->tx_buf_type != cached_cfg->tx_buf_type) {
+        ESP_LOGI(TAG, "WiFi init config: tx_buf_type changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->tx_buf_type, (unsigned long)new_cfg->tx_buf_type);
+        changed = true;
+    }
+
+    if (new_cfg->static_tx_buf_num != cached_cfg->static_tx_buf_num) {
+        ESP_LOGI(TAG, "WiFi init config: static_tx_buf_num changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->static_tx_buf_num, (unsigned long)new_cfg->static_tx_buf_num);
+        changed = true;
+    }
+
+    if (new_cfg->dynamic_tx_buf_num != cached_cfg->dynamic_tx_buf_num) {
+        ESP_LOGI(TAG, "WiFi init config: dynamic_tx_buf_num changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->dynamic_tx_buf_num, (unsigned long)new_cfg->dynamic_tx_buf_num);
+        changed = true;
+    }
+
+    if (new_cfg->cache_tx_buf_num != cached_cfg->cache_tx_buf_num) {
+        ESP_LOGI(TAG, "WiFi init config: cache_tx_buf_num changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->cache_tx_buf_num, (unsigned long)new_cfg->cache_tx_buf_num);
+        changed = true;
+    }
+
+    if (new_cfg->csi_enable != cached_cfg->csi_enable) {
+        ESP_LOGI(TAG, "WiFi init config: csi_enable changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->csi_enable, (unsigned long)new_cfg->csi_enable);
+        changed = true;
+    }
+
+    if (new_cfg->ampdu_rx_enable != cached_cfg->ampdu_rx_enable) {
+        ESP_LOGI(TAG, "WiFi init config: ampdu_rx_enable changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->ampdu_rx_enable, (unsigned long)new_cfg->ampdu_rx_enable);
+        changed = true;
+    }
+
+    if (new_cfg->ampdu_tx_enable != cached_cfg->ampdu_tx_enable) {
+        ESP_LOGI(TAG, "WiFi init config: ampdu_tx_enable changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->ampdu_tx_enable, (unsigned long)new_cfg->ampdu_tx_enable);
+        changed = true;
+    }
+
+    if (new_cfg->amsdu_tx_enable != cached_cfg->amsdu_tx_enable) {
+        ESP_LOGI(TAG, "WiFi init config: amsdu_tx_enable changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->amsdu_tx_enable, (unsigned long)new_cfg->amsdu_tx_enable);
+        changed = true;
+    }
+
+    if (new_cfg->nvs_enable != cached_cfg->nvs_enable) {
+        ESP_LOGI(TAG, "WiFi init config: nvs_enable changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->nvs_enable, (unsigned long)new_cfg->nvs_enable);
+        changed = true;
+    }
+
+    if (new_cfg->nano_enable != cached_cfg->nano_enable) {
+        ESP_LOGI(TAG, "WiFi init config: nano_enable changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->nano_enable, (unsigned long)new_cfg->nano_enable);
+        changed = true;
+    }
+
+    if (new_cfg->rx_ba_win != cached_cfg->rx_ba_win) {
+        ESP_LOGI(TAG, "WiFi init config: rx_ba_win changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->rx_ba_win, (unsigned long)new_cfg->rx_ba_win);
+        changed = true;
+    }
+
+    if (new_cfg->wifi_task_core_id != cached_cfg->wifi_task_core_id) {
+        ESP_LOGI(TAG, "WiFi init config: wifi_task_core_id changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->wifi_task_core_id, (unsigned long)new_cfg->wifi_task_core_id);
+        changed = true;
+    }
+
+    if (new_cfg->beacon_max_len != cached_cfg->beacon_max_len) {
+        ESP_LOGI(TAG, "WiFi init config: beacon_max_len changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->beacon_max_len, (unsigned long)new_cfg->beacon_max_len);
+        changed = true;
+    }
+
+    if (new_cfg->mgmt_sbuf_num != cached_cfg->mgmt_sbuf_num) {
+        ESP_LOGI(TAG, "WiFi init config: mgmt_sbuf_num changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->mgmt_sbuf_num, (unsigned long)new_cfg->mgmt_sbuf_num);
+        changed = true;
+    }
+
+    if (new_cfg->feature_caps != cached_cfg->feature_caps) {
+        ESP_LOGI(TAG, "WiFi init config: feature_caps changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->feature_caps, (unsigned long)new_cfg->feature_caps);
+        changed = true;
+    }
+
+    if (new_cfg->sta_disconnected_pm != cached_cfg->sta_disconnected_pm) {
+        ESP_LOGI(TAG, "WiFi init config: sta_disconnected_pm changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->sta_disconnected_pm, (unsigned long)new_cfg->sta_disconnected_pm);
+        changed = true;
+    }
+
+    if (new_cfg->espnow_max_encrypt_num != cached_cfg->espnow_max_encrypt_num) {
+        ESP_LOGI(TAG, "WiFi init config: espnow_max_encrypt_num changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->espnow_max_encrypt_num, (unsigned long)new_cfg->espnow_max_encrypt_num);
+        changed = true;
+    }
+
+    if (new_cfg->magic != cached_cfg->magic) {
+        ESP_LOGI(TAG, "WiFi init config: magic changed: %lu -> %lu",
+                 (unsigned long)cached_cfg->magic, (unsigned long)new_cfg->magic);
+        changed = true;
+    }
+
+    return changed;
+}
+
+/**
+ * @brief Wrapper function for esp_wifi_init that caches config and handles reinitialization
+ *
+ * This function intercepts calls to esp_wifi_init, caches the configuration,
+ * and compares with previous config. If config has changed and WiFi is already
+ * initialized, it will stop, deinit, and reinitialize with the new parameters.
+ */
+esp_err_t __wrap_esp_wifi_init(const wifi_init_config_t *config)
+{
+    esp_err_t ret;
+    bool should_reinit = false;
+    ESP_LOGI(TAG, "=== __wrap_esp_wifi_init called ===");
+
+    if (wifi_initialized) {
+        /* Compare with cached config */
+        if (has_cached_config && wifi_init_config_changed(config, &cached_wifi_init_config)) {
+            ESP_LOGI(TAG, "WiFi init config changed, reinitializing");
+            esp_wifi_stop();
+            esp_wifi_deinit();
+            wifi_initialized = false;
+            should_reinit = true;
+        } else {
+            ESP_LOGW(TAG, "WiFi already initialized with same parameters");
+            return ESP_OK;
+        }
+    } else {
+        ESP_LOGI(TAG, "First-time WiFi initialization");
+    }
+
+    /* Cache the config for future comparisons */
+    if (config) {
+        memcpy(&cached_wifi_init_config, config, sizeof(wifi_init_config_t));
+        has_cached_config = true;
+    }
+
+    /* Call the real init function */
+    ESP_LOGI(TAG, "Calling __real_esp_wifi_init...");
+    ret = __real_esp_wifi_init(config);
+    ESP_LOGI(TAG, "__real_esp_wifi_init returned: %d", ret);
+
+    if (ret == ESP_OK && !should_reinit) {
+        wifi_initialized = true;
+    }
+
+    return ret;
+}
+
 static esp_err_t req_wifi_init(Rpc *req, Rpc *resp, void *priv_data)
 {
+	int ret = 0;
+
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 
 	RPC_TEMPLATE(RpcRespWifiInit, resp_wifi_init,
@@ -845,15 +1184,51 @@ static esp_err_t req_wifi_init(Rpc *req, Rpc *resp, void *priv_data)
 			rpc__resp__wifi_init__init);
 
 	RPC_RET_FAIL_IF(!req_payload->cfg);
+
+	cfg.static_rx_buf_num       = req_payload->cfg->static_rx_buf_num      ;
+	cfg.dynamic_rx_buf_num      = req_payload->cfg->dynamic_rx_buf_num     ;
+	cfg.tx_buf_type             = req_payload->cfg->tx_buf_type            ;
+	cfg.static_tx_buf_num       = req_payload->cfg->static_tx_buf_num      ;
+	cfg.dynamic_tx_buf_num      = req_payload->cfg->dynamic_tx_buf_num     ;
+
+#if CONFIG_IDF_TARGET_ESP32C2
+	/* Hardcode: No static tx buffers for c2 due to low memory issues */
+	if (!cfg.tx_buf_type) {
+		cfg.tx_buf_type         = 1;
+
+		if (!cfg.dynamic_tx_buf_num)
+			cfg.dynamic_tx_buf_num = 16;
+	}
+#endif
+	cfg.cache_tx_buf_num        = req_payload->cfg->cache_tx_buf_num       ;
+	cfg.csi_enable              = req_payload->cfg->csi_enable             ;
+	cfg.ampdu_rx_enable         = req_payload->cfg->ampdu_rx_enable        ;
+	cfg.ampdu_tx_enable         = req_payload->cfg->ampdu_tx_enable        ;
+	cfg.amsdu_tx_enable         = req_payload->cfg->amsdu_tx_enable        ;
+	cfg.nvs_enable              = req_payload->cfg->nvs_enable             ;
+	cfg.nano_enable             = req_payload->cfg->nano_enable            ;
+	cfg.rx_ba_win               = req_payload->cfg->rx_ba_win              ;
+	cfg.wifi_task_core_id       = req_payload->cfg->wifi_task_core_id      ;
+	cfg.beacon_max_len          = req_payload->cfg->beacon_max_len         ;
+	cfg.mgmt_sbuf_num           = req_payload->cfg->mgmt_sbuf_num          ;
+	cfg.feature_caps            = req_payload->cfg->feature_caps           ;
+	cfg.sta_disconnected_pm     = req_payload->cfg->sta_disconnected_pm    ;
+	cfg.espnow_max_encrypt_num  = req_payload->cfg->espnow_max_encrypt_num ;
+	cfg.magic                   = req_payload->cfg->magic                  ;
+
+	ESP_LOGV(TAG, "Wifi-config: static_rx_buf_num[%lu] dynamic_rx_buf_num[%lu] tx_buf_type[%lu]", (unsigned long)cfg.static_rx_buf_num, (unsigned long)cfg.dynamic_rx_buf_num, (unsigned long)cfg.tx_buf_type);
+	ESP_LOGV(TAG, "Wifi-config: static_tx_buf_num[%lu] dynamic_tx_buf_num[%lu] cache_tx_buf_num[%lu]", (unsigned long)cfg.static_tx_buf_num, (unsigned long)cfg.dynamic_tx_buf_num, (unsigned long)cfg.cache_tx_buf_num);
+	ESP_LOGV(TAG, "Wifi-config: csi_enable[%lu] ampdu_rx_enable[%lu] ampdu_tx_enable[%lu] amsdu_tx_enable[%lu]", (unsigned long)cfg.csi_enable, (unsigned long)cfg.ampdu_rx_enable, (unsigned long)cfg.ampdu_tx_enable, (unsigned long)cfg.amsdu_tx_enable);
+	ESP_LOGV(TAG, "Wifi-config: nvs_enable[%lu] nano_enable[%lu] rx_ba_win[%lu] wifi_task_core_id[%lu]", (unsigned long)cfg.nvs_enable, (unsigned long)cfg.nano_enable, (unsigned long)cfg.rx_ba_win, (unsigned long)cfg.wifi_task_core_id);
+	ESP_LOGV(TAG, "Wifi-config: beacon_max_len[%lu] mgmt_sbuf_num[%lu] feature_caps[%lu] sta_disconnected_pm[%lu]", (unsigned long)cfg.beacon_max_len, (unsigned long)cfg.mgmt_sbuf_num, (unsigned long)cfg.feature_caps, (unsigned long)cfg.sta_disconnected_pm);
+	ESP_LOGV(TAG, "Wifi-config: espnow_max_encrypt_num[%lu] magic[%lu]", (unsigned long)cfg.espnow_max_encrypt_num, (unsigned long)cfg.magic);
+
+	/* Use our wrapper directly instead of esp_hosted_wifi_init */
 	RPC_RET_FAIL_IF(esp_wifi_init(get_merged_init_config(&cfg, req_payload->cfg)));
 
-	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-			ESP_EVENT_ANY_ID,
-			&event_handler,
-			NULL,
-			&instance_any_id));
+	esp_hosted_register_wifi_event_handlers();
 
-	return ESP_OK;
+	return ret;
 }
 
 static esp_err_t req_wifi_deinit(Rpc *req, Rpc *resp, void *priv_data)
@@ -874,6 +1249,14 @@ static esp_err_t req_wifi_start(Rpc *req, Rpc *resp, void *priv_data)
 			RpcReqWifiStart, req_wifi_start,
 			rpc__resp__wifi_start__init);
 
+	if (wifi_started) {
+		ESP_LOGW(TAG, "Wifi is already started");
+		int event_id = WIFI_EVENT_STA_START;
+		send_wifi_event_data_to_host(RPC_ID__Event_WifiEventNoArgs,
+				&event_id, sizeof(event_id));
+		return ESP_OK;
+	}
+
 	RPC_RET_FAIL_IF(esp_wifi_start());
 	return ESP_OK;
 }
@@ -883,7 +1266,7 @@ static esp_err_t req_wifi_stop(Rpc *req, Rpc *resp, void *priv_data)
 	RPC_TEMPLATE_SIMPLE(RpcRespWifiStop, resp_wifi_stop,
 			RpcReqWifiStop, req_wifi_stop,
 			rpc__resp__wifi_stop__init);
-
+	wifi_started = false;
 	RPC_RET_FAIL_IF(esp_wifi_stop());
 
 	return ESP_OK;
@@ -891,12 +1274,50 @@ static esp_err_t req_wifi_stop(Rpc *req, Rpc *resp, void *priv_data)
 
 static esp_err_t req_wifi_connect(Rpc *req, Rpc *resp, void *priv_data)
 {
+	int ret = ESP_OK;
+	wifi_config_t wifi_cfg = {0};
+
 	RPC_TEMPLATE_SIMPLE(RpcRespWifiConnect, resp_wifi_connect,
 			RpcReqWifiConnect, req_wifi_connect,
 			rpc__resp__wifi_connect__init);
 
-	ESP_LOGI(TAG, "************ connect ****************");
-	RPC_RET_FAIL_IF(esp_wifi_connect());
+	// Check if WiFi config has valid SSID before attempting connection
+	if (esp_wifi_get_config(WIFI_IF_STA, &wifi_cfg) != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to get WiFi config");
+		resp_payload->resp = ESP_ERR_WIFI_NOT_INIT;
+		return ESP_OK;
+	}
+
+	if (strlen((char*)wifi_cfg.sta.ssid) == 0) {
+		ESP_LOGE(TAG, "No SSID configured, cannot connect");
+		resp_payload->resp = ESP_ERR_WIFI_SSID;
+		return ESP_OK;
+	}
+
+	ESP_LOGI(TAG, "Attempting to connect to SSID: %s", wifi_cfg.sta.ssid);
+
+	if (new_config_recvd || !station_connected) {
+		ESP_LOGI(TAG, "************ connect ****************");
+		//station_connecting = true;
+		ret = esp_wifi_connect();
+		if (ret != ESP_OK) {
+			ESP_LOGE(TAG, "Failed to connect to WiFi: %d", ret);
+			station_connecting = false;
+		}
+	} else {
+		ESP_LOGI(TAG, "connect recvd, ack with connected event");
+
+
+#if CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+		//send_dhcp_dns_info_to_host(1, 0);
+#endif
+
+        send_wifi_event_data_to_host(RPC_ID__Event_StaConnected,
+            &lkg_sta_connected_event, sizeof(wifi_event_sta_connected_t));
+	}
+
+	if (ret != ESP_ERR_WIFI_CONN)
+		resp_payload->resp = ret;
 
 	return ESP_OK;
 }
@@ -912,6 +1333,98 @@ static esp_err_t req_wifi_disconnect(Rpc *req, Rpc *resp, void *priv_data)
 	return ESP_OK;
 }
 
+static bool wifi_is_provisioned(wifi_config_t *wifi_cfg)
+{
+	if (!wifi_cfg) {
+		ESP_LOGI(TAG, "NULL wifi cfg passed, ignore");
+		return false;
+	}
+
+	if (esp_wifi_get_config(WIFI_IF_STA, wifi_cfg) != ESP_OK) {
+		ESP_LOGI(TAG, "Wifi get config failed");
+		return false;
+	}
+
+	ESP_LOGI(TAG, "SSID: %s", wifi_cfg->sta.ssid);
+
+	if (strlen((const char *) wifi_cfg->sta.ssid)) {
+		ESP_LOGI(TAG, "Wifi provisioned");
+		return true;
+	}
+	ESP_LOGI(TAG, "Wifi not provisioned, Fallback to example config");
+
+	return false;
+}
+
+/* Function to compare two WiFi configurations */
+static bool is_wifi_config_equal(const wifi_config_t *cfg1, const wifi_config_t *cfg2)
+{
+	if (!cfg1 || !cfg2) {
+		return false;
+	}
+	/* Compare SSID */
+	if (strcmp((char *)cfg1->sta.ssid, (char *)cfg2->sta.ssid) != 0) {
+		ESP_LOGD(TAG, "SSID different: '%s' vs '%s'", cfg1->sta.ssid, cfg2->sta.ssid);
+		return false;
+	}
+
+	/* Compare password */
+	if (strcmp((char *)cfg1->sta.password, (char *)cfg2->sta.password) != 0) {
+		ESP_LOGD(TAG, "Password different");
+		return false;
+	}
+
+	/* Compare BSSID if set */
+	if (cfg1->sta.bssid_set && cfg2->sta.bssid_set) {
+		if (memcmp(cfg1->sta.bssid, cfg2->sta.bssid, BSSID_BYTES_SIZE) != 0) {
+			ESP_LOGD(TAG, "BSSID different");
+			return false;
+		}
+	} else if (cfg1->sta.bssid_set != cfg2->sta.bssid_set) {
+		ESP_LOGD(TAG, "BSSID set status different: %d vs %d",
+			cfg1->sta.bssid_set, cfg2->sta.bssid_set);
+		return false;
+	}
+
+	/* Compare channel if set */
+	if (cfg1->sta.channel != 0 && cfg2->sta.channel != 0) {
+		if (cfg1->sta.channel != cfg2->sta.channel) {
+			ESP_LOGD(TAG, "Channel different: %d vs %d",
+				cfg1->sta.channel, cfg2->sta.channel);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+
+/* Function to handle WiFi configuration */
+esp_err_t esp_hosted_set_sta_config(wifi_interface_t iface, wifi_config_t *cfg)
+{
+    wifi_config_t current_config = {0};
+    if (!wifi_is_provisioned(&current_config)) {
+        if (esp_wifi_set_config(WIFI_IF_STA, cfg) != ESP_OK) {
+            ESP_LOGW(TAG, "not provisioned and failed to set wifi config");
+        } else {
+            ESP_LOGI(TAG, "Provisioned new Wi-Fi config");
+            new_config_recvd = true;
+			station_connecting = false;
+        }
+    }
+
+    if (!is_wifi_config_equal(cfg, &current_config)) {
+        new_config_recvd = true;
+		station_connecting = false;
+        ESP_LOGI(TAG, "Setting new WiFi config SSID: %s", cfg->sta.ssid);
+        memcpy(&new_wifi_config, cfg, sizeof(wifi_config_t));
+    } else {
+        ESP_LOGI(TAG, "WiFi config unchanged, keeping current connection");
+        new_config_recvd = false;
+    }
+
+    return ESP_OK;
+}
 
 static esp_err_t req_wifi_set_config(Rpc *req, Rpc *resp, void *priv_data)
 {
@@ -925,7 +1438,9 @@ static esp_err_t req_wifi_set_config(Rpc *req, Rpc *resp, void *priv_data)
 			(req_payload->iface != WIFI_IF_AP));
 
 	RPC_RET_FAIL_IF(!req_payload->cfg);
+
 	if (req_payload->iface == WIFI_IF_STA) {
+
 		wifi_sta_config_t * p_a_sta = &(cfg.sta);
 		WifiStaConfig * p_c_sta = req_payload->cfg->sta;
 		RPC_RET_FAIL_IF(!req_payload->cfg->sta);
@@ -934,7 +1449,7 @@ static esp_err_t req_wifi_set_config(Rpc *req, Rpc *resp, void *priv_data)
 			ESP_LOGI(TAG, "STA set config: SSID:%s", p_a_sta->ssid);
 		RPC_REQ_COPY_STR(p_a_sta->password, p_c_sta->password, PASSWORD_LENGTH);
 		if (strlen((char*)p_a_sta->password))
-			ESP_LOGD(TAG, "STA: password:%s", p_a_sta->password);
+			ESP_LOGD(TAG, "STA: password:xxxxxxxx");
 		p_a_sta->scan_method = p_c_sta->scan_method;
 		p_a_sta->bssid_set = p_c_sta->bssid_set;
 
@@ -1043,8 +1558,7 @@ static esp_err_t req_wifi_set_config(Rpc *req, Rpc *resp, void *priv_data)
 #endif
 	}
 
-	RPC_RET_FAIL_IF(esp_wifi_set_config(req_payload->iface, &cfg));
-
+	RPC_RET_FAIL_IF(esp_hosted_set_sta_config(req_payload->iface, &cfg));
 	return ESP_OK;
 }
 
@@ -1265,12 +1779,19 @@ static esp_err_t req_wifi_scan_start(Rpc *req, Rpc *resp, void *priv_data)
 
 static esp_err_t req_wifi_set_protocol(Rpc *req, Rpc *resp, void *priv_data)
 {
+	uint8_t protocol_bitmap = 0;
 	RPC_TEMPLATE(RpcRespWifiSetProtocol, resp_wifi_set_protocol,
-			RpcReqWifiSetProtocol, req_wifi_set_protocol,
-			rpc__resp__wifi_set_protocol__init);
+		RpcReqWifiSetProtocol, req_wifi_set_protocol,
+		rpc__resp__wifi_set_protocol__init);
 
-	RPC_RET_FAIL_IF(esp_wifi_set_protocol(req_payload->ifx,
+	/* Get current protocol first */
+	RPC_RET_FAIL_IF(esp_wifi_get_protocol(req_payload->ifx, &protocol_bitmap));
+
+	/* Only set if different */
+	if (protocol_bitmap != req_payload->protocol_bitmap) {
+		RPC_RET_FAIL_IF(esp_wifi_set_protocol(req_payload->ifx,
 			req_payload->protocol_bitmap));
+	}
 	return ESP_OK;
 }
 
@@ -1580,18 +2101,28 @@ static esp_err_t req_wifi_set_storage(Rpc *req, Rpc *resp, void *priv_data)
 			RpcReqWifiSetStorage, req_wifi_set_storage,
 			rpc__resp__wifi_set_storage__init);
 
+	ESP_LOGI(TAG, "Setting wifi storage: %lu", req_payload->storage);
+
 	RPC_RET_FAIL_IF(esp_wifi_set_storage(req_payload->storage));
+
 	return ESP_OK;
 }
 
 static esp_err_t req_wifi_set_bandwidth(Rpc *req, Rpc *resp, void *priv_data)
 {
-	RPC_TEMPLATE(RpcRespWifiSetBandwidth, resp_wifi_set_bandwidth,
-			RpcReqWifiSetBandwidth, req_wifi_set_bandwidth,
-			rpc__resp__wifi_set_bandwidth__init);
+    wifi_bandwidth_t current_bw = 0;
+    RPC_TEMPLATE(RpcRespWifiSetBandwidth, resp_wifi_set_bandwidth,
+            RpcReqWifiSetBandwidth, req_wifi_set_bandwidth,
+            rpc__resp__wifi_set_bandwidth__init);
 
-	RPC_RET_FAIL_IF(esp_wifi_set_bandwidth(req_payload->ifx, req_payload->bw));
-	return ESP_OK;
+    /* Get current bandwidth first */
+    RPC_RET_FAIL_IF(esp_wifi_get_bandwidth(req_payload->ifx, &current_bw));
+
+    /* Only set if different */
+    if (current_bw != req_payload->bw) {
+        RPC_RET_FAIL_IF(esp_wifi_set_bandwidth(req_payload->ifx, req_payload->bw));
+    }
+    return ESP_OK;
 }
 
 static esp_err_t req_wifi_get_bandwidth(Rpc *req, Rpc *resp, void *priv_data)
@@ -1609,12 +2140,20 @@ static esp_err_t req_wifi_get_bandwidth(Rpc *req, Rpc *resp, void *priv_data)
 
 static esp_err_t req_wifi_set_channel(Rpc *req, Rpc *resp, void *priv_data)
 {
-	RPC_TEMPLATE(RpcRespWifiSetChannel, resp_wifi_set_channel,
-			RpcReqWifiSetChannel, req_wifi_set_channel,
-			rpc__resp__wifi_set_channel__init);
+    uint8_t current_primary = 0;
+    wifi_second_chan_t current_second = 0;
+    RPC_TEMPLATE(RpcRespWifiSetChannel, resp_wifi_set_channel,
+            RpcReqWifiSetChannel, req_wifi_set_channel,
+            rpc__resp__wifi_set_channel__init);
 
-	RPC_RET_FAIL_IF(esp_wifi_set_channel(req_payload->primary, req_payload->second));
-	return ESP_OK;
+    /* Get current channel config first */
+    RPC_RET_FAIL_IF(esp_wifi_get_channel(&current_primary, &current_second));
+
+    /* Only set if different */
+    if (current_primary != req_payload->primary || current_second != req_payload->second) {
+        RPC_RET_FAIL_IF(esp_wifi_set_channel(req_payload->primary, req_payload->second));
+    }
+    return ESP_OK;
 }
 
 static esp_err_t req_wifi_get_channel(Rpc *req, Rpc *resp, void *priv_data)
@@ -1639,11 +2178,18 @@ static esp_err_t req_wifi_set_country_code(Rpc *req, Rpc *resp, void *priv_data)
 			rpc__resp__wifi_set_country_code__init);
 
 	char cc[3] = {0}; // country code
+	char current_cc[3] = {0}; // current country code
 	RPC_RET_FAIL_IF(!req_payload->country.data);
 	RPC_REQ_COPY_STR(&cc[0], req_payload->country, 2); // only copy the first two chars
 
-	RPC_RET_FAIL_IF(esp_wifi_set_country_code(&cc[0],
-			req_payload->ieee80211d_enabled));
+	/* Get current country code first */
+	RPC_RET_FAIL_IF(esp_wifi_get_country_code(&current_cc[0]));
+
+	/* Only set if different */
+	if (strncmp(cc, current_cc, 2) != 0 || req_payload->ieee80211d_enabled) {
+		RPC_RET_FAIL_IF(esp_wifi_set_country_code(&cc[0],
+				req_payload->ieee80211d_enabled));
+	}
 
 	return ESP_OK;
 }
@@ -1671,6 +2217,7 @@ static esp_err_t req_wifi_set_country(Rpc *req, Rpc *resp, void *priv_data)
 	RPC_RET_FAIL_IF(!req_payload->country);
 
 	wifi_country_t country = {0};
+	wifi_country_t current_country = {0};
 	WifiCountry * p_c_country = req_payload->country;
 	RPC_REQ_COPY_BYTES(&country.cc[0], p_c_country->cc, sizeof(country.cc));
 	country.schan        = p_c_country->schan;
@@ -1678,7 +2225,13 @@ static esp_err_t req_wifi_set_country(Rpc *req, Rpc *resp, void *priv_data)
 	country.max_tx_power = p_c_country->max_tx_power;
 	country.policy       = p_c_country->policy;
 
-	RPC_RET_FAIL_IF(esp_wifi_set_country(&country));
+	/* Get current country first */
+	RPC_RET_FAIL_IF(esp_wifi_get_country(&current_country));
+
+	/* Only set if different */
+	if (memcmp(&country, &current_country, sizeof(wifi_country_t)) != 0) {
+		RPC_RET_FAIL_IF(esp_wifi_set_country(&country));
+	}
 
 	return ESP_OK;
 }
@@ -1832,12 +2385,19 @@ static esp_err_t req_wifi_set_protocols(Rpc *req, Rpc *resp, void *priv_data)
 	resp_payload->ifx = ifx;
 
 	wifi_protocols_t protocols;
+	wifi_protocols_t current_protocols;
 	protocols.ghz_2g = req_payload->protocols->ghz_2g;
 	protocols.ghz_5g = req_payload->protocols->ghz_5g;
 
 	ESP_LOGI(TAG, "set protocols: ghz_2g %d, ghz_5g %d", protocols.ghz_2g, protocols.ghz_5g);
 
-	RPC_RET_FAIL_IF(esp_wifi_set_protocols(ifx, &protocols));
+	/* Get current protocols first */
+	RPC_RET_FAIL_IF(esp_wifi_get_protocols(ifx, &current_protocols));
+
+	/* Only set if different */
+	if (memcmp(&protocols, &current_protocols, sizeof(wifi_protocols_t)) != 0) {
+		RPC_RET_FAIL_IF(esp_wifi_set_protocols(ifx, &protocols));
+	}
 
 	return ESP_OK;
 #else
@@ -1887,13 +2447,20 @@ static esp_err_t req_wifi_set_bandwidths(Rpc *req, Rpc *resp, void *priv_data)
 	resp_payload->ifx = ifx;
 
 	wifi_bandwidths_t bw;
+	wifi_bandwidths_t current_bw;
 
 	bw.ghz_2g = req_payload->bandwidths->ghz_2g;
 	bw.ghz_5g = req_payload->bandwidths->ghz_5g;
 
 	ESP_LOGI(TAG, "set bandwidths: ghz_2g %d, ghz_5g %d", bw.ghz_2g, bw.ghz_5g);
 
-	RPC_RET_FAIL_IF(esp_wifi_set_bandwidths(ifx, &bw));
+	/* Get current bandwidths first */
+	RPC_RET_FAIL_IF(esp_wifi_get_bandwidths(ifx, &current_bw));
+
+	/* Only set if different */
+	if (memcmp(&bw, &current_bw, sizeof(wifi_bandwidths_t)) != 0) {
+		RPC_RET_FAIL_IF(esp_wifi_set_bandwidths(ifx, &bw));
+	}
 
 	return ESP_OK;
 #else
@@ -1937,11 +2504,18 @@ static esp_err_t req_wifi_set_band(Rpc *req, Rpc *resp, void *priv_data)
 			rpc__resp__wifi_set_band__init);
 
 	wifi_band_t band;
+	wifi_band_t current_band;
 	band = req_payload->band;
 
 	ESP_LOGW(TAG, "set band: %d", band);
 
-	RPC_RET_FAIL_IF(esp_wifi_set_band(band));
+	/* Get current band first */
+	RPC_RET_FAIL_IF(esp_wifi_get_band(&current_band));
+
+	/* Only set if different */
+	if (current_band != band) {
+		RPC_RET_FAIL_IF(esp_wifi_set_band(band));
+	}
 
 	return ESP_OK;
 #else
@@ -1977,11 +2551,18 @@ static esp_err_t req_wifi_set_band_mode(Rpc *req, Rpc *resp, void *priv_data)
 			rpc__resp__wifi_set_band_mode__init);
 
 	wifi_band_mode_t band_mode;
+	wifi_band_mode_t current_band_mode;
 	band_mode = req_payload->bandmode;
 
-	ESP_LOGW(TAG, "set band_mode: %d", band_mode);
+	ESP_LOGW(TAG, "set band mode: %d", band_mode);
 
-	RPC_RET_FAIL_IF(esp_wifi_set_band_mode(band_mode));
+	/* Get current band mode first */
+	RPC_RET_FAIL_IF(esp_wifi_get_band_mode(&current_band_mode));
+
+	/* Only set if different */
+	if (current_band_mode != band_mode) {
+		RPC_RET_FAIL_IF(esp_wifi_set_band_mode(band_mode));
+	}
 
 	return ESP_OK;
 #else
@@ -2009,6 +2590,135 @@ static esp_err_t req_wifi_get_band_mode(Rpc *req, Rpc *resp, void *priv_data)
 #endif
 }
 
+/* Get DHCP/DNS status handler */
+static esp_err_t req_get_dhcp_dns_status(Rpc *req, Rpc *resp, void *priv_data)
+{
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+    RPC_TEMPLATE(RpcRespGetDhcpDnsStatus, resp_get_dhcp_dns,
+            RpcReqGetDhcpDnsStatus, req_get_dhcp_dns,
+            rpc__resp__get_dhcp_dns_status__init);
+#else
+    RPC_TEMPLATE_SIMPLE(RpcRespGetDhcpDnsStatus, resp_get_dhcp_dns,
+            RpcReqGetDhcpDnsStatus, req_get_dhcp_dns,
+            rpc__resp__get_dhcp_dns_status__init);
+#endif
+
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+    int ret1, ret2;
+    esp_netif_ip_info_t ip_info = {0};
+    esp_netif_dns_info_t dns = {0};
+    uint8_t netlink_up = 0;
+
+    ret1 = get_slave_static_ip(req_payload->iface, &ip_info, &netlink_up);
+    ret2 = get_slave_dns(req_payload->iface, &dns);
+
+    if (ret1 || ret2) {
+        ESP_LOGE(TAG, "Failed to get DHCP/DNS status");
+        resp_payload->resp = ESP_FAIL;
+        resp_payload->dhcp_up = 0;
+        resp_payload->dns_up = 0;
+        resp_payload->net_link_up = 0;
+        return ESP_OK;
+    }
+    ESP_LOGI(TAG, "static_ip_ret: %d dns_ret: %d", ret1, ret2);
+
+    resp_payload->net_link_up = netlink_up;
+    resp_payload->dhcp_up = netlink_up;
+    resp_payload->dns_up = netlink_up;
+    resp_payload->dns_type = dns.ip.type;
+
+    char sta_ip[64] = {0};
+    char sta_nm[64] = {0};
+    char sta_gw[64] = {0};
+    char sta_dns_ip[64] = {0};
+
+    if (esp_ip4addr_ntoa(&ip_info.ip, sta_ip, sizeof(sta_ip))) {
+        strlcpy((char *)resp_payload->dhcp_ip.data, sta_ip, sizeof(resp_payload->dhcp_ip.data));
+        resp_payload->dhcp_ip.len = strlen(sta_ip);
+    }
+    if (esp_ip4addr_ntoa(&ip_info.netmask, sta_nm, sizeof(sta_nm))) {
+        strlcpy((char *)resp_payload->dhcp_nm.data, sta_nm, sizeof(resp_payload->dhcp_nm.data));
+        resp_payload->dhcp_nm.len = strlen(sta_nm);
+    }
+    if (esp_ip4addr_ntoa(&ip_info.gw, sta_gw, sizeof(sta_gw))) {
+        strlcpy((char *)resp_payload->dhcp_gw.data, sta_gw, sizeof(resp_payload->dhcp_gw.data));
+        resp_payload->dhcp_gw.len = strlen(sta_gw);
+    }
+    if (esp_ip4addr_ntoa(&dns.ip.u_addr.ip4, sta_dns_ip, sizeof(sta_dns_ip))) {
+        strlcpy((char *)resp_payload->dns_ip.data, sta_dns_ip, sizeof(resp_payload->dns_ip.data));
+        resp_payload->dns_ip.len = strlen(sta_dns_ip);
+    }
+
+    ESP_LOGI(TAG, "Fetched IP: %s, NM: %s, GW: %s, DNS IP: %s, Type: %d",
+            resp_payload->dhcp_ip.data,
+            resp_payload->dhcp_nm.data,
+            resp_payload->dhcp_gw.data,
+            resp_payload->dns_ip.data,
+            resp_payload->dns_type);
+
+    resp_payload->resp = ESP_OK;
+#else
+    resp_payload->resp = ESP_FAIL;
+#endif
+    return ESP_OK;
+}
+
+static esp_err_t req_set_dhcp_dns_status(Rpc *req, Rpc *resp, void *priv_data)
+{
+
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+	RPC_TEMPLATE(RpcRespSetDhcpDnsStatus, resp_set_dhcp_dns,
+			RpcReqSetDhcpDnsStatus, req_set_dhcp_dns,
+			rpc__resp__set_dhcp_dns_status__init);
+#else
+	RPC_TEMPLATE_SIMPLE(RpcRespSetDhcpDnsStatus, resp_set_dhcp_dns,
+			RpcReqSetDhcpDnsStatus, req_set_dhcp_dns,
+			rpc__resp__set_dhcp_dns_status__init);
+#endif
+
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+
+	uint8_t iface = req_payload->iface;
+	uint8_t net_link_up = req_payload->net_link_up;
+	uint8_t dhcp_up = req_payload->dhcp_up;
+	uint8_t dns_up = req_payload->dns_up;
+	uint8_t dns_type = req_payload->dns_type;
+
+	char dhcp_ip[64] = {0};
+	char dhcp_nm[64] = {0};
+	char dhcp_gw[64] = {0};
+	char dns_ip[64] = {0};
+
+	ESP_LOGI(TAG, "iface: %u link_up:%u dhcp_up:%u dns_up:%u dns_type:%u",
+			iface, net_link_up, dhcp_up, dns_up, dns_type);
+
+	if (req_payload->dhcp_ip.len)
+		ESP_LOGI(TAG, "dhcp ip: %s" , req_payload->dhcp_ip.data);
+	if (req_payload->dhcp_nm.len)
+		ESP_LOGI(TAG, "dhcp nm: %s" , req_payload->dhcp_nm.data);
+	if (req_payload->dhcp_gw.len)
+		ESP_LOGI(TAG, "dhcp gw: %s" , req_payload->dhcp_gw.data);
+	if (req_payload->dns_ip.len)
+		ESP_LOGI(TAG, "dns ip: %s" , req_payload->dns_ip.data);
+
+	RPC_REQ_COPY_BYTES(dhcp_ip, req_payload->dhcp_ip, sizeof(dhcp_ip));
+	RPC_REQ_COPY_BYTES(dhcp_nm, req_payload->dhcp_nm, sizeof(dhcp_nm));
+	RPC_REQ_COPY_BYTES(dhcp_gw, req_payload->dhcp_gw, sizeof(dhcp_gw));
+	RPC_REQ_COPY_BYTES(dns_ip, req_payload->dns_ip, sizeof(dns_ip));
+
+	if (dhcp_up)
+		set_slave_static_ip(iface, dhcp_ip, dhcp_nm, dhcp_gw);
+
+	if (dns_up)
+		set_slave_dns(iface, dns_ip, dns_type);
+#else
+
+	resp_payload->resp = ESP_FAIL;
+
+#endif
+
+	return ESP_OK;
+}
 static esp_err_t req_get_coprocessor_fw_version(Rpc *req, Rpc *resp, void *priv_data)
 {
 	RPC_TEMPLATE_SIMPLE(RpcRespGetCoprocessorFwVersion, resp_get_coprocessor_fwversion,
@@ -2022,19 +2732,6 @@ static esp_err_t req_get_coprocessor_fw_version(Rpc *req, Rpc *resp, void *priv_
 
 	return ESP_OK;
 }
-
-#if 0
-static esp_err_t req_wifi_(Rpc *req, Rpc *resp, void *priv_data)
-{
-	RPC_TEMPLATE(RpcRespWifi, resp_wifi_,
-			RpcReqWifi, req_wifi_,
-			rpc__resp__wifi___init);
-
-	RPC_RET_FAIL_IF(esp_wifi_(&cfg));
-
-	return ESP_OK;
-}
-#endif
 
 static esp_rpc_req_t req_table[] = {
 	{
@@ -2256,6 +2953,14 @@ static esp_rpc_req_t req_table[] = {
 	{
 		.req_num = RPC_ID__Req_GetCoprocessorFwVersion,
 		.command_handler = req_get_coprocessor_fw_version
+	},
+	{
+		.req_num = RPC_ID__Req_SetDhcpDnsStatus,
+		.command_handler = req_set_dhcp_dns_status
+	},
+	{
+		.req_num = RPC_ID__Req_GetDhcpDnsStatus,
+		.command_handler = req_get_dhcp_dns_status
 	},
 };
 
@@ -2549,8 +3254,34 @@ static esp_err_t rpc_evt_Event_WifiEventNoArgs(Rpc *ntfy,
 
 	ntfy_payload->event_id = event_id;
 
+	ntfy_payload->resp = SUCCESS;
 	return ESP_OK;
 }
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+static esp_err_t rpc_evt_Event_DhcpDnsStatus(Rpc *ntfy,
+		const uint8_t *data, ssize_t len)
+{
+	NTFY_TEMPLATE(RPC_ID__Event_DhcpDnsStatus,
+			RpcEventDhcpDnsStatus, event_dhcp_dns,
+			rpc__event__dhcp_dns_status__init);
+
+	rpc_dhcp_dns_status_t * p_a = (rpc_dhcp_dns_status_t*)data;
+
+	ntfy_payload->iface = p_a->iface;
+	ntfy_payload->net_link_up = p_a->net_link_up;
+	ntfy_payload->dhcp_up = p_a->dhcp_up;
+	ntfy_payload->dns_up = p_a->dns_up;
+	ntfy_payload->dns_type = p_a->dns_type;
+
+	NTFY_COPY_BYTES(ntfy_payload->dhcp_ip, p_a->dhcp_ip, sizeof(p_a->dhcp_ip));
+	NTFY_COPY_BYTES(ntfy_payload->dhcp_nm, p_a->dhcp_nm, sizeof(p_a->dhcp_nm));
+	NTFY_COPY_BYTES(ntfy_payload->dhcp_gw, p_a->dhcp_gw, sizeof(p_a->dhcp_gw));
+	NTFY_COPY_BYTES(ntfy_payload->dns_ip, p_a->dns_ip, sizeof(p_a->dns_ip));
+
+	ntfy_payload->resp = SUCCESS;
+	return ESP_OK;
+}
+#endif
 
 esp_err_t rpc_evt_handler(uint32_t session_id,const uint8_t *inbuf,
 		ssize_t inlen, uint8_t **outbuf, ssize_t *outlen, void *priv_data)
@@ -2597,6 +3328,11 @@ esp_err_t rpc_evt_handler(uint32_t session_id,const uint8_t *inbuf,
 		} case RPC_ID__Event_WifiEventNoArgs: {
 			ret = rpc_evt_Event_WifiEventNoArgs(ntfy, inbuf, inlen);
 			break;
+#ifdef CONFIG_ESP_HOSTED_NETWORK_SPLIT_ENABLED
+		} case RPC_ID__Event_DhcpDnsStatus: {
+			ret = rpc_evt_Event_DhcpDnsStatus(ntfy, inbuf, inlen);
+			break;
+#endif
 		} default: {
 			ESP_LOGE(TAG, "Incorrect/unsupported Ctrl Notification[%u]\n",ntfy->msg_id);
 			goto err;
