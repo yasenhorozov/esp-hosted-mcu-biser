@@ -11,7 +11,6 @@ Key features include:
 - Seamless network handover during sleep
 - Integration with Network Split
 
-> Deep sleep currently supported on SDIO transport only.
 ---
 ## Configuration
 
@@ -30,7 +29,7 @@ Component config
 ```
 > [!NOTE]
 > 1. The wakeup GPIO number must be an RTC-capable GPIO.
-> 2. Deep Sleep is currently only available for the SDIO transport for ESP hosts.
+> 2. Ensure the wake up GPIO is unused
 
 ### Slave Configuration
 
