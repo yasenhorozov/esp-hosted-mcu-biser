@@ -92,6 +92,7 @@ menu "ESP-Hosted config"
 				Enable/Disable UART host interface
 
 		config ESP_HOSTED_USB_HOST_INTERFACE
+			depends on IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C5
 			bool "USB"
 			help
 				Enable/Disable USB host interface
