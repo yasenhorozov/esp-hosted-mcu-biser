@@ -90,6 +90,11 @@ menu "ESP-Hosted config"
 			bool "UART"
 			help
 				Enable/Disable UART host interface
+
+		config ESP_HOSTED_USB_HOST_INTERFACE
+			bool "USB"
+			help
+				Enable/Disable USB host interface
 	endchoice
 
 	config ESP_HOSTED_IDF_SLAVE_TARGET
@@ -1368,6 +1373,61 @@ ESP32XX_SPI_HD_CLK_FREQ_RANGE_MAX := 40
 			default y
 			help
 				ENABLE/DISABLE software UART checksum
+	endmenu
+
+	menu "USB Configuration"
+		depends on ESP_HOSTED_USB_HOST_INTERFACE
+
+		choice ESP_HOSTED_USB_MODE
+			bool "USB Mode"
+			default ESP_HOSTED_USB_HOST_MODE
+			help
+				Select USB mode: Host or Device
+
+			config ESP_HOSTED_USB_HOST_MODE
+				bool "USB Host Mode"
+				help
+					Enable USB Host mode using CDC-ACM
+
+			config ESP_HOSTED_USB_DEVICE_MODE
+				bool "USB Device Mode"
+				help
+					Enable USB Device mode using TinyUSB CDC-ACM
+		endchoice
+
+		config ESP_HOSTED_USB_TX_Q_SIZE
+			int "USB Host TX Queue Size"
+			default 20
+			range 5 50
+			help
+				Queue length for host to esp data path
+
+		config ESP_HOSTED_USB_RX_Q_SIZE
+			int "USB Host RX Queue Size"
+			default 20
+			range 5 50
+			help
+				Queue length for esp to host data path
+
+		config ESP_HOSTED_USB_CHECKSUM
+			bool "USB checksum ENABLE/DISABLE"
+			default y
+			help
+				ENABLE/DISABLE software USB checksum
+
+		config ESP_HOSTED_USB_BULK_ENDPOINT_SIZE
+			int "USB Bulk Endpoint Size"
+			default 512
+			range 64 512
+			help
+				USB bulk endpoint size for data transfer
+
+		config ESP_HOSTED_USB_CDC_ACM_CLASS
+			bool "Use CDC-ACM USB Class"
+			default y
+			help
+				Use CDC-ACM USB class for communication
+
 	endmenu
 
 	menu "Common Slave Reset Strategy"

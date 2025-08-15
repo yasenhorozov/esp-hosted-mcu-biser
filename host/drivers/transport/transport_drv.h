@@ -49,6 +49,12 @@ extern "C" {
 #define SPI_MODE1                           (1)
 #define SPI_MODE2                           (2)
 #define SPI_MODE3                           (3)
+#elif H_TRANSPORT_IN_USE == H_TRANSPORT_USB
+#include "usb_wrapper.h"
+#elif H_TRANSPORT_IN_USE == H_TRANSPORT_SPI_HD
+#include "spi_hd_wrapper.h"
+#elif H_TRANSPORT_IN_USE == H_TRANSPORT_UART
+#include "uart_wrapper.h"
 #else
 #include "sdio_wrapper.h"
 #endif

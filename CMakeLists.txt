@@ -8,7 +8,7 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 	# only these directories are public. Others are private
 	set(pub_include "${host_dir}" "${host_dir}/api/include")
 
-	set(priv_include "${host_dir}/drivers/transport" "${host_dir}/drivers/transport/spi" "${host_dir}/drivers/transport/sdio" "${host_dir}/drivers/serial" "${host_dir}/utils" "${host_dir}/api/priv")
+	set(priv_include "${host_dir}/drivers/transport" "${host_dir}/drivers/transport/spi" "${host_dir}/drivers/transport/sdio" "${host_dir}/drivers/transport/usb" "${host_dir}/drivers/serial" "${host_dir}/utils" "${host_dir}/api/priv")
 
 	# rpc files - wrap -> slaveif -> core
 	set(rpc_dir "${host_dir}/drivers/rpc")
@@ -63,6 +63,8 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 		list(APPEND srcs "${host_dir}/drivers/transport/spi/spi_drv.c")
 	elseif(CONFIG_ESP_HOSTED_UART_HOST_INTERFACE)
 		list(APPEND srcs "${host_dir}/drivers/transport/uart/uart_drv.c")
+	elseif(CONFIG_ESP_HOSTED_USB_HOST_INTERFACE)
+		list(APPEND srcs "${host_dir}/drivers/transport/usb/usb_drv.c")
 	endif()
 
 	# config files
@@ -79,6 +81,8 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 		list(APPEND srcs "${host_dir}/port/esp/freertos/src/spi_wrapper.c")
 	elseif(CONFIG_ESP_HOSTED_UART_HOST_INTERFACE)
 		list(APPEND srcs "${host_dir}/port/esp/freertos/src/uart_wrapper.c")
+	elseif(CONFIG_ESP_HOSTED_USB_HOST_INTERFACE)
+		list(APPEND srcs "${host_dir}/port/esp/freertos/src/usb_wrapper.c")
 	endif()
 
 endif()
@@ -92,6 +96,10 @@ idf_component_set_property(${COMPONENT_NAME} WHOLE_ARCHIVE TRUE)
 
 if(CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE)
 	idf_component_optional_requires(PRIVATE sdmmc)
+endif()
+
+if(CONFIG_ESP_HOSTED_USB_HOST_INTERFACE)
+	idf_component_optional_requires(PRIVATE usb tinyusb)
 endif()
 
 # Required if using ESP-IDF without commit 6b6065de509b5de39e4655fd425bf96f43b365f7:

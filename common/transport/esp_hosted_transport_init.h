@@ -24,6 +24,8 @@ typedef enum {
 	ESP_WLAN_SPI_SUPPORT = (1 << 5),
 	ESP_BT_SPI_SUPPORT = (1 << 6),
 	ESP_CHECKSUM_ENABLED = (1 << 7),
+	ESP_WLAN_USB_SUPPORT = (1 << 8),
+	ESP_BT_USB_SUPPORT = (1 << 9),
 } ESP_CAPABILITIES;
 
 typedef enum {
@@ -40,6 +42,10 @@ typedef enum {
 	// Hosted UART interface
 	ESP_WLAN_UART_SUPPORT = (1 << 8),
 	ESP_BT_VHCI_UART_SUPPORT = (1 << 9), // VHCI over UART
+
+	// Hosted USB interface
+	ESP_WLAN_USB_SUPPORT = (1 << 10),
+	ESP_BT_VHCI_USB_SUPPORT = (1 << 11), // VHCI over USB
 } ESP_EXTENDED_CAPABILITIES;
 
 typedef enum {
@@ -48,6 +54,7 @@ typedef enum {
 	ESP_TEST_RAW_TP__ESP_TO_HOST = (1 << 1),
 	ESP_TEST_RAW_TP__HOST_TO_ESP = (1 << 2),
 	ESP_TEST_RAW_TP__BIDIRECTIONAL = (1 << 3),
+	ESP_TEST_RAW_TP__USB = (1 << 4),
 } ESP_RAW_TP_MEASUREMENT;
 
 typedef enum {

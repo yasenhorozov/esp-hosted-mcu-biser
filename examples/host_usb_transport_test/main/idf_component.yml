@@ -1,0 +1,14 @@
+dependencies:
+  # ESP-IDF built-in components
+  esp_wifi: "*"
+  esp_event: "*"
+  esp_netif: "*"
+  nvs_flash: "*"
+  console: "*"
+  
+  # USB related components
+  usb: "*"
+  tinyusb: "*"
+  
+  # Command system for console
+  esp_system: "*"

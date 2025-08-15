@@ -103,6 +103,28 @@ struct esp_hosted_uart_config {
 	uint16_t rx_queue_size;
 };
 
+struct esp_hosted_usb_config {
+	/* USB Mode: Host or Device */
+	bool host_mode;
+	bool device_mode;
+
+	/* USB configuration */
+	bool checksum_enable;
+	bool cdc_acm_class;
+	uint16_t bulk_endpoint_size;
+	uint16_t tx_queue_size;
+	uint16_t rx_queue_size;
+
+	/* USB Host mode specific */
+	uint16_t vendor_id;
+	uint16_t product_id;
+
+	/* USB Device mode specific */
+	const char* manufacturer_string;
+	const char* product_string;
+	const char* serial_string;
+};
+
 struct esp_hosted_transport_config {
 	uint8_t transport_in_use;
 	union {
@@ -110,6 +132,7 @@ struct esp_hosted_transport_config {
 		struct esp_hosted_spi_hd_config spi_hd;
 		struct esp_hosted_spi_config spi;
 		struct esp_hosted_uart_config uart;
+		struct esp_hosted_usb_config usb;
 	} u;
 };
 
@@ -201,6 +224,24 @@ struct esp_hosted_transport_config {
     }
 #endif
 
+#if H_TRANSPORT_USB == H_TRANSPORT_IN_USE
+#define INIT_DEFAULT_HOST_USB_CONFIG() \
+    (struct esp_hosted_usb_config) { \
+        .host_mode = H_USB_HOST_MODE, \
+        .device_mode = H_USB_DEVICE_MODE, \
+        .checksum_enable = H_USB_CHECKSUM, \
+        .cdc_acm_class = H_USB_CDC_ACM_CLASS, \
+        .bulk_endpoint_size = H_USB_BULK_ENDPOINT_SIZE, \
+        .tx_queue_size = H_USB_TX_QUEUE_SIZE, \
+        .rx_queue_size = H_USB_RX_QUEUE_SIZE, \
+        .vendor_id = 0x303A, \
+        .product_id = 0x1001, \
+        .manufacturer_string = "Espressif", \
+        .product_string = "ESP Hosted USB Device", \
+        .serial_string = "0123456789" \
+    }
+#endif
+
 /* Configuration get/set functions */
 esp_hosted_transport_err_t esp_hosted_transport_set_default_config(void);
 esp_hosted_transport_err_t esp_hosted_transport_get_config(struct esp_hosted_transport_config **config);
@@ -235,6 +276,12 @@ esp_hosted_transport_err_t esp_hosted_spi_set_config(struct esp_hosted_spi_confi
 /* UART functions */
 esp_hosted_transport_err_t esp_hosted_uart_get_config(struct esp_hosted_uart_config **config);
 esp_hosted_transport_err_t esp_hosted_uart_set_config(struct esp_hosted_uart_config *config) __attribute__((warn_unused_result));
+#endif
+
+#if H_TRANSPORT_USB == H_TRANSPORT_IN_USE
+/* USB functions */
+esp_hosted_transport_err_t esp_hosted_usb_get_config(struct esp_hosted_usb_config **config);
+esp_hosted_transport_err_t esp_hosted_usb_set_config(struct esp_hosted_usb_config *config) __attribute__((warn_unused_result));
 #endif
 
 #endif /* __ESP_HOSTED_TRANSPORT_CONFIG_H__ */

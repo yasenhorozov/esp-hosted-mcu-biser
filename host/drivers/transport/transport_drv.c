@@ -403,12 +403,16 @@ static void print_capabilities(uint32_t cap)
 	ESP_LOGI(TAG, "Features supported are:");
 	if (cap & ESP_WLAN_SDIO_SUPPORT)
 		ESP_LOGI(TAG, "\t * WLAN");
+	if (cap & ESP_WLAN_USB_SUPPORT)
+		ESP_LOGI(TAG, "\t * WLAN over USB");
 	if (cap & ESP_BT_UART_SUPPORT)
 		ESP_LOGI(TAG, "\t   - HCI over UART");
 	if (cap & ESP_BT_SDIO_SUPPORT)
 		ESP_LOGI(TAG, "\t   - HCI over SDIO");
 	if (cap & ESP_BT_SPI_SUPPORT)
 		ESP_LOGI(TAG, "\t   - HCI over SPI");
+	if (cap & ESP_BT_USB_SUPPORT)
+		ESP_LOGI(TAG, "\t   - HCI over USB");
 	if ((cap & ESP_BLE_ONLY_SUPPORT) && (cap & ESP_BR_EDR_ONLY_SUPPORT))
 		ESP_LOGI(TAG, "\t   - BT/BLE dual mode");
 	else if (cap & ESP_BLE_ONLY_SUPPORT)
@@ -442,6 +446,11 @@ static void print_ext_capabilities(uint8_t * ptr)
 		ESP_LOGI(TAG, "\t * WLAN over UART");
 	if (cap & ESP_BT_VHCI_UART_SUPPORT)
 		ESP_LOGI(TAG, "\t * BT over UART (VHCI)");
+#elif H_USB_HOST_TRANSPORT
+	if (cap & ESP_WLAN_USB_SUPPORT)
+		ESP_LOGI(TAG, "\t * WLAN over USB");
+	if (cap & ESP_BT_VHCI_USB_SUPPORT)
+		ESP_LOGI(TAG, "\t * BT over USB (VHCI)");
 #else
 	ESP_LOGI(TAG, "\t No extended features. capabilities[%" PRIu32 "]", cap);
 #endif

@@ -26,6 +26,7 @@
 #define H_TRANSPORT_SPI_HD 2
 #define H_TRANSPORT_SPI 3
 #define H_TRANSPORT_UART 4
+#define H_TRANSPORT_USB 5
 
 #ifdef CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE
   #include "driver/sdmmc_host.h"
@@ -331,6 +332,34 @@ enum {
   /*  -------------------------- UART Host Config end -------------------------  */
 #else
   #define H_UART_HOST_TRANSPORT 0
+#endif
+
+#ifdef CONFIG_ESP_HOSTED_USB_HOST_INTERFACE
+  #define H_TRANSPORT_IN_USE H_TRANSPORT_USB
+  /*  -------------------------- USB Host Config start -------------------------  */
+
+  #define H_USB_HOST_TRANSPORT 1
+
+  #define H_USB_TX_QUEUE_SIZE                          CONFIG_ESP_HOSTED_USB_TX_Q_SIZE
+  #define H_USB_RX_QUEUE_SIZE                          CONFIG_ESP_HOSTED_USB_RX_Q_SIZE
+  #define H_USB_CHECKSUM                               CONFIG_ESP_HOSTED_USB_CHECKSUM
+  #define H_USB_BULK_ENDPOINT_SIZE                     CONFIG_ESP_HOSTED_USB_BULK_ENDPOINT_SIZE
+  #define H_USB_CDC_ACM_CLASS                          CONFIG_ESP_HOSTED_USB_CDC_ACM_CLASS
+
+  #ifdef CONFIG_ESP_HOSTED_USB_HOST_MODE
+    #define H_USB_HOST_MODE 1
+    #define H_USB_DEVICE_MODE 0
+  #elif defined(CONFIG_ESP_HOSTED_USB_DEVICE_MODE)
+    #define H_USB_HOST_MODE 0
+    #define H_USB_DEVICE_MODE 1
+  #else
+    #define H_USB_HOST_MODE 1
+    #define H_USB_DEVICE_MODE 0
+  #endif
+
+  /*  -------------------------- USB Host Config end -------------------------  */
+#else
+  #define H_USB_HOST_TRANSPORT 0
 #endif
 
 /* Generic reset pin config */
