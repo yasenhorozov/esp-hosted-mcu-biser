@@ -98,7 +98,6 @@ menu "ESP-Hosted config"
 				Enable/Disable UART host interface
 
 		config ESP_HOSTED_USB_HOST_INTERFACE
-			depends on ESP_HOSTED_PRIV_USB_OPTION
 			bool "USB"
 			help
 				Enable/Disable USB host interface
